@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HP Skin Studio - Admin</title>
+<link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body class="admin-login-body">
+  <form id="loginForm" class="login-card">
+    <div class="brand">
+      <img src="/logo-placeholder.svg" alt="HP" class="brand-logo" />
+      <span>HP Skin Studio Admin</span>
+    </div>
+    <h1>Sign in</h1>
+    <label class="field-label" for="username">Username</label>
+    <input id="username" name="username" type="text" autocomplete="username" required />
+    <label class="field-label" for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required />
+    <p id="loginError" class="error-text" hidden></p>
+    <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+  </form>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

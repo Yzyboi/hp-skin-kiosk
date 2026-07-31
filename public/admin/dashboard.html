@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HP Skin Studio - Admin Dashboard</title>
+<link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+  <header class="admin-header">
+    <div class="brand">
+      <img src="/logo-placeholder.svg" alt="HP" class="brand-logo" />
+      <span>HP Skin Studio Admin</span>
+    </div>
+    <button id="logoutBtn" class="link-btn">Sign out</button>
+  </header>
+
+  <main class="admin-main">
+    <section class="admin-card">
+      <h2>1. Download template</h2>
+      <p class="muted">Grab the .xlsx template with the required header row and an example row.</p>
+      <a class="btn btn-secondary" href="/admin/api/template" download>Download store template (.xlsx)</a>
+    </section>
+
+    <section class="admin-card">
+      <h2>2. Upload store data</h2>
+      <p class="muted">
+        Rows are merged by <b>Store ID</b>: existing IDs are updated, new IDs are added, and stores
+        not present in the file are left untouched. Malformed rows are skipped individually.
+      </p>
+      <form id="uploadForm" class="upload-row">
+        <input id="fileInput" type="file" accept=".xlsx" required />
+        <button type="submit" class="btn btn-primary">Upload</button>
+      </form>
+      <p id="uploadError" class="error-text" hidden></p>
+
+      <div id="uploadSummary" class="upload-summary" hidden>
+        <h3>Upload summary</h3>
+        <div class="summary-stats">
+          <div class="stat"><span id="statAdded" class="stat-num">0</span><span class="stat-label">Added</span></div>
+          <div class="stat"><span id="statUpdated" class="stat-num">0</span><span class="stat-label">Updated</span></div>
+          <div class="stat"><span id="statSkipped" class="stat-num">0</span><span class="stat-label">Skipped</span></div>
+        </div>
+        <table id="skippedTable" class="data-table" hidden>
+          <thead><tr><th>Row</th><th>Reason</th></tr></thead>
+          <tbody id="skippedBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="admin-card">
+      <h2>3. Current store data</h2>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Store ID</th>
+            <th>Store Name</th>
+            <th>Region</th>
+            <th>Print Provider Name</th>
+            <th>Print Provider Email(s)</th>
+            <th>Last Updated</th>
+          </tr>
+        </thead>
+        <tbody id="storesBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

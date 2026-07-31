@@ -1,0 +1,13 @@
+<!-- Placeholder design asset - replace with real artwork in public/designs/. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f3f5f8"/>
+  <g fill="#024AD8">
+    <circle cx="30" cy="30" r="6"/><circle cx="70" cy="30" r="6"/><circle cx="110" cy="30" r="6"/><circle cx="150" cy="30" r="6"/><circle cx="190" cy="30" r="6"/><circle cx="230" cy="30" r="6"/><circle cx="270" cy="30" r="6"/><circle cx="310" cy="30" r="6"/><circle cx="350" cy="30" r="6"/><circle cx="390" cy="30" r="6"/>
+    <circle cx="30" cy="70" r="6"/><circle cx="70" cy="70" r="6"/><circle cx="110" cy="70" r="6"/><circle cx="150" cy="70" r="6"/><circle cx="190" cy="70" r="6"/><circle cx="230" cy="70" r="6"/><circle cx="270" cy="70" r="6"/><circle cx="310" cy="70" r="6"/><circle cx="350" cy="70" r="6"/><circle cx="390" cy="70" r="6"/>
+    <circle cx="30" cy="110" r="6"/><circle cx="70" cy="110" r="6"/><circle cx="110" cy="110" r="6"/><circle cx="150" cy="110" r="6"/><circle cx="190" cy="110" r="6"/><circle cx="230" cy="110" r="6"/><circle cx="270" cy="110" r="6"/><circle cx="310" cy="110" r="6"/><circle cx="350" cy="110" r="6"/><circle cx="390" cy="110" r="6"/>
+    <circle cx="30" cy="150" r="6"/><circle cx="70" cy="150" r="6"/><circle cx="110" cy="150" r="6"/><circle cx="150" cy="150" r="6"/><circle cx="190" cy="150" r="6"/><circle cx="230" cy="150" r="6"/><circle cx="270" cy="150" r="6"/><circle cx="310" cy="150" r="6"/><circle cx="350" cy="150" r="6"/><circle cx="390" cy="150" r="6"/>
+    <circle cx="30" cy="190" r="6"/><circle cx="70" cy="190" r="6"/><circle cx="110" cy="190" r="6"/><circle cx="150" cy="190" r="6"/><circle cx="190" cy="190" r="6"/><circle cx="230" cy="190" r="6"/><circle cx="270" cy="190" r="6"/><circle cx="310" cy="190" r="6"/><circle cx="350" cy="190" r="6"/><circle cx="390" cy="190" r="6"/>
+    <circle cx="30" cy="230" r="6"/><circle cx="70" cy="230" r="6"/><circle cx="110" cy="230" r="6"/><circle cx="150" cy="230" r="6"/><circle cx="190" cy="230" r="6"/><circle cx="230" cy="230" r="6"/><circle cx="270" cy="230" r="6"/><circle cx="310" cy="230" r="6"/><circle cx="350" cy="230" r="6"/><circle cx="390" cy="230" r="6"/>
+    <circle cx="30" cy="270" r="6"/><circle cx="70" cy="270" r="6"/><circle cx="110" cy="270" r="6"/><circle cx="150" cy="270" r="6"/><circle cx="190" cy="270" r="6"/><circle cx="230" cy="270" r="6"/><circle cx="270" cy="270" r="6"/><circle cx="310" cy="270" r="6"/><circle cx="350" cy="270" r="6"/><circle cx="390" cy="270" r="6"/>
+  </g>
+</svg>

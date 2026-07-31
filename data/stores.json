@@ -1,0 +1,26 @@
+[
+  {
+    "storeId": "HP-001",
+    "storeName": "HP World - Placeholder Flagship",
+    "region": "West",
+    "printProviderName": "Placeholder Print Co.",
+    "printProviderEmails": ["print-placeholder-1@example.com"],
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "storeId": "HP-002",
+    "storeName": "HP World - Placeholder Downtown",
+    "region": "East",
+    "printProviderName": "Placeholder Print Co.",
+    "printProviderEmails": ["print-placeholder-2@example.com"],
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "storeId": "HP-003",
+    "storeName": "HP World - Placeholder Riverside",
+    "region": "",
+    "printProviderName": "Placeholder Print Co.",
+    "printProviderEmails": ["print-placeholder-3@example.com", "backup-placeholder-3@example.com"],
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  }
+]
