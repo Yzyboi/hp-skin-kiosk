@@ -3,59 +3,69 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>HP Skin Studio</title>
+<title>OmniBook Skin Studio</title>
 <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
   <div class="kiosk">
     <header class="kiosk-header">
       <div class="brand">
-        <img src="/logo-placeholder.svg" alt="HP" class="brand-logo" />
-        <span class="brand-title">HP Skin Studio</span>
+        <img src="/hp-logo.jpg" alt="HP" class="brand-logo" />
+        <div class="brand-lockup">
+          <span class="brand-title">OmniBook</span>
+          <span class="brand-subtitle">Skin Studio</span>
+        </div>
       </div>
-      <div class="header-right">
-        <span id="storeLabel" class="store-label" hidden></span>
-        <button id="changeStoreBtn" class="link-btn" hidden>Change store</button>
-      </div>
+      <button id="startOverHeaderBtn" class="btn btn-secondary btn-small" hidden>Start Over</button>
     </header>
 
-    <div id="progressBar" class="progress-bar" hidden>
-      <div class="progress-step" data-step="1"><span class="dot"></span><span class="label">Size</span></div>
-      <div class="progress-step" data-step="2"><span class="dot"></span><span class="label">Design</span></div>
-      <div class="progress-step" data-step="3"><span class="dot"></span><span class="label">Customize</span></div>
+    <div id="progressBar" class="progress-bar">
+      <div class="progress-seg" data-step="0"></div>
+      <div class="progress-seg" data-step="1"></div>
+      <div class="progress-seg" data-step="2"></div>
+      <div class="progress-seg" data-step="3"></div>
+      <div class="progress-seg" data-step="4"></div>
     </div>
 
     <main class="screens">
       <!-- Screen 1: Store select -->
       <section class="screen active" data-screen="store">
-        <div class="screen-inner narrow">
-          <h1>Welcome</h1>
-          <p class="subtitle">Select this store to begin.</p>
-          <div id="storeList" class="store-list" role="listbox" aria-label="Select a store"></div>
+        <div class="store-decoration" aria-hidden="true"></div>
+        <div class="screen-inner narrow store-inner">
+          <h1>Welcome to OmniBook Skin Studio.</h1>
+          <p class="subtitle">Select your store to begin.</p>
+          <label class="field-label" for="storeSelect">Store</label>
+          <select id="storeSelect" class="select-input">
+            <option value="">Choose a store&hellip;</option>
+          </select>
+          <p class="hint">Per-store staff context for this session.</p>
           <p id="storeError" class="error-text" hidden></p>
+          <button id="storeContinueBtn" class="btn btn-primary" disabled>Continue</button>
         </div>
       </section>
 
       <!-- Screen 2: SKU picker -->
       <section class="screen" data-screen="sku">
         <div class="screen-inner">
-          <h1>Choose your device</h1>
-          <p class="subtitle">Pick the model you're customizing a skin for.</p>
+          <h1>Choose your laptop.</h1>
+          <p class="subtitle">Pick the model you're personalizing.</p>
           <div id="skuGrid" class="card-grid"></div>
           <div class="nav-row">
-            <button class="btn btn-ghost" data-action="back-to-store">Back</button>
+            <button class="btn btn-secondary" data-action="back-to-store">Back</button>
+            <button id="skuContinueBtn" class="btn btn-primary" disabled>Continue</button>
           </div>
         </div>
       </section>
 
       <!-- Screen 3: Design picker -->
       <section class="screen" data-screen="design">
-        <div class="screen-inner">
-          <h1>Pick a design</h1>
-          <p class="subtitle">Choose the base design for your skin.</p>
-          <div id="designGrid" class="card-grid"></div>
+        <div class="screen-inner wide">
+          <h1>Choose Your Design.</h1>
+          <p class="subtitle">Four skins, each with a built-in space for your initials.</p>
+          <div id="designGrid" class="card-grid design-grid"></div>
           <div class="nav-row">
-            <button class="btn btn-ghost" data-action="back-to-sku">Back</button>
+            <button class="btn btn-secondary" data-action="back-to-sku">Back</button>
+            <button id="designContinueBtn" class="btn btn-primary" disabled>Continue</button>
           </div>
         </div>
       </section>
@@ -63,14 +73,10 @@
       <!-- Screen 4: Customize + live preview -->
       <section class="screen" data-screen="customize">
         <div class="screen-inner wide">
-          <h1>Make it yours</h1>
-          <p class="subtitle">Add your initials and preview your skin live.</p>
           <div class="customize-layout">
-            <div class="preview-pane">
-              <canvas id="previewCanvas"></canvas>
-            </div>
             <div class="controls-pane">
-              <label for="initialsInput" class="field-label">Initials</label>
+              <h1>Add your initials.</h1>
+              <p class="subtitle">1&ndash;3 letters. They'll appear live on your <span id="customizeDesignName"></span> skin.</p>
               <input
                 id="initialsInput"
                 class="initials-input"
@@ -79,12 +85,31 @@
                 autocomplete="off"
                 spellcheck="false"
                 maxlength="3"
-                placeholder="ABC"
+                placeholder="e.g. AK"
               />
-              <p class="hint">Letters only &middot; up to 3 characters</p>
+              <p class="hint">Letters only, automatically capitalized.</p>
+
+              <label class="field-label">Accent Colour</label>
+              <div id="accentSwatches" class="swatch-row"></div>
+
+              <label class="field-label">Motif</label>
+              <div id="motifButtons" class="motif-row"></div>
+
               <p id="submitError" class="error-text" hidden></p>
-              <button id="finalizeBtn" class="btn btn-primary btn-block">Complete my skin</button>
-              <button class="btn btn-ghost btn-block" data-action="back-to-design">Back</button>
+              <div class="nav-row">
+                <button class="btn btn-secondary" data-action="back-to-design">Back</button>
+                <button id="finalizeBtn" class="btn btn-primary" disabled>Finalize</button>
+              </div>
+            </div>
+            <div class="preview-pane">
+              <div id="previewBox" class="preview-box">
+                <img id="previewImg" class="preview-layer preview-base" alt="" />
+                <div id="previewMotifZone" class="preview-layer preview-motif-zone"></div>
+                <div id="previewZone" class="preview-layer preview-zone">
+                  <span id="previewInitials" class="preview-initials"></span>
+                </div>
+              </div>
+              <p id="previewCaption" class="caption"></p>
             </div>
           </div>
         </div>
@@ -94,13 +119,24 @@
       <section class="screen" data-screen="confirm">
         <div class="screen-inner narrow">
           <div class="confirm-check">&#10003;</div>
-          <h1>You're all set</h1>
-          <p class="subtitle">Your order has been sent to the print provider.</p>
-          <div class="reference-box">
-            <span class="reference-label">Reference ID</span>
-            <span id="referenceId" class="reference-id"></span>
+          <h1>You're all set.</h1>
+          <p class="subtitle">Reference ID</p>
+          <p id="referenceId" class="reference-id"></p>
+
+          <div class="summary-box">
+            <p class="summary-label">Preview &mdash; sent to print team</p>
+            <div class="summary-grid">
+              <span class="summary-key">Design</span><span id="sumDesign" class="summary-val"></span>
+              <span class="summary-key">SKU family</span><span id="sumSku" class="summary-val"></span>
+              <span class="summary-key">Initials</span><span id="sumInitials" class="summary-val"></span>
+              <span class="summary-key">Accent Colour</span><span id="sumAccent" class="summary-val"></span>
+              <span class="summary-key">Motif</span><span id="sumMotif" class="summary-val"></span>
+              <span class="summary-key">Store</span><span id="sumStore" class="summary-val"></span>
+              <span class="summary-key">Reference ID</span><span id="sumReferenceId" class="summary-val"></span>
+            </div>
           </div>
-          <button id="startOverBtn" class="btn btn-primary btn-block">Start over</button>
+          <p id="submitStatus" class="hint submit-status"></p>
+          <button id="startOverBtn" class="btn btn-primary btn-block">Start Next Customer</button>
         </div>
       </section>
     </main>

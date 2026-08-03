@@ -1,0 +1,8 @@
+<!-- Placeholder design asset - replace with real artwork in public/designs/.
+     Fixed base art (Electric Blue baked in); does not recolor with the
+     Accent Colour picker - see config/designs.js. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#ffffff"/>
+  <circle cx="200" cy="150" r="175" fill="none" stroke="#cfe0fb" stroke-width="26"/>
+  <circle cx="200" cy="150" r="102" fill="none" stroke="#0B4FD1" stroke-width="14"/>
+</svg>

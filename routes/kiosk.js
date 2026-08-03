@@ -7,6 +7,8 @@ const crypto = require("crypto");
 
 const skus = require("../config/skus");
 const designs = require("../config/designs");
+const accentColors = require("../config/accentColors");
+const motifs = require("../config/motifs");
 const { readStores, findStoreById } = require("../lib/storesStore");
 const { sanitizeInitials, isValidInitials } = require("../lib/validators");
 const { sendSpecSheetEmail } = require("../lib/emailProvider");
@@ -29,6 +31,14 @@ router.get("/skus", (req, res) => {
 
 router.get("/designs", (req, res) => {
   res.json(designs);
+});
+
+router.get("/accent-colors", (req, res) => {
+  res.json(accentColors);
+});
+
+router.get("/motifs", (req, res) => {
+  res.json(motifs);
 });
 
 // Current kiosk session context (store-only "login" state).
@@ -65,14 +75,18 @@ router.post("/submit", async (req, res) => {
     return res.status(400).json({ error: "Selected store no longer exists" });
   }
 
-  const { skuId, designId, previewPng } = req.body || {};
+  const { skuId, designId, accentId, motifId, previewPng } = req.body || {};
   const initials = sanitizeInitials(req.body && req.body.initials);
 
   const sku = skus.find((s) => s.id === skuId);
   const design = designs.find((d) => d.id === designId);
+  const accent = accentColors.find((a) => a.id === accentId);
+  const motif = motifs.find((m) => m.id === motifId);
 
   if (!sku) return res.status(400).json({ error: "Invalid SKU" });
   if (!design) return res.status(400).json({ error: "Invalid design" });
+  if (!accent) return res.status(400).json({ error: "Invalid accent colour" });
+  if (!motif) return res.status(400).json({ error: "Invalid motif" });
   if (!isValidInitials(initials)) {
     return res.status(400).json({ error: "Initials must be 1-3 letters" });
   }
@@ -91,6 +105,8 @@ router.post("/submit", async (req, res) => {
     widthMm: sku.widthMm,
     heightMm: sku.heightMm,
     initials,
+    accentName: accent.name,
+    motifName: motif.name,
     storeName: store.storeName,
     region: store.region,
     printProviderName: store.printProviderName,

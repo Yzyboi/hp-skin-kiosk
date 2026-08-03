@@ -99,16 +99,25 @@ After processing, the dashboard shows counts of rows added / updated /
 skipped, with the specific reason and Excel row number for every skipped
 row.
 
-## Adding real SKUs and designs
+## Adding real SKUs, designs, accent colors, and motifs
 
 - SKUs: edit `config/skus.js`. Each entry is `{ id, familyName, widthMm,
   heightMm, cornerRadiusMm? }`. These drive the live-preview aspect ratio
   and print dimensions - no other assets are needed per SKU.
 - Designs: drop the asset (SVG preferred, high-res PNG accepted) into
   `public/designs/`, then add an entry to `config/designs.js`:
-  `{ id, name, assetPath, zone: { xPct, yPct, widthPct, heightPct, align } }`.
-  `zone` is percentage-based (0-100) so it holds across every SKU's aspect
-  ratio; tune it to land the initials panel wherever suits the artwork.
+  `{ id, name, assetPath, zone: { xPct, yPct, widthPct, heightPct, align,
+  followsAccent, fixedColor }, motifZone: { xPct, yPct, widthPct, heightPct } }`.
+  Percentages are relative to the design's own bounding box, so they hold
+  across every SKU's aspect ratio. The design artwork itself is a fixed,
+  static image (it does not recolor with the Accent Colour picker below) -
+  only the initials text (when `zone.followsAccent` is true) and the motif
+  icon drawn inside `motifZone` pick up the customer's chosen accent.
+- Accent colors: edit `config/accentColors.js` - `{ id, name, hex }`.
+- Motifs: edit `config/motifs.js` - `{ id, name }`. The actual icon shape
+  for each motif id is drawn in `public/js/kiosk.js` (`MOTIF_ICON_HTML` for
+  the on-screen preview, `drawMotif()` for the rasterized PNG that gets
+  emailed) - add a case there if you introduce a new motif id.
 
 ## Swapping Gmail SMTP for Amazon SES
 

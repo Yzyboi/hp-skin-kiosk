@@ -1,0 +1,11 @@
+<!-- Placeholder design asset - replace with real artwork in public/designs/.
+     Fixed base art (Electric Blue baked in); does not recolor with the
+     Accent Colour picker - see config/designs.js. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#ffffff"/>
+  <g stroke="rgba(11,79,209,0.12)" stroke-width="1">
+    <path d="M0 48H400M0 96H400M0 144H400M0 192H400M0 240H400"/>
+    <path d="M48 0V300M96 0V300M144 0V300M192 0V300M240 0V300M288 0V300M336 0V300M384 0V300"/>
+  </g>
+  <polygon points="0,0 220,0 152,114 0,114" fill="#0B4FD1"/>
+</svg>
