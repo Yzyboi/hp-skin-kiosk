@@ -106,6 +106,7 @@ router.post("/submit", async (req, res) => {
     customerName,
     customerNumber,
     customerEmail,
+    customerAddress,
     customerCity,
     customerState,
     customerPincode
@@ -133,6 +134,7 @@ router.post("/submit", async (req, res) => {
     name: customerName,
     number: customerNumber,
     email: customerEmail,
+    address: customerAddress,
     city: customerCity,
     state: customerState,
     pincode: customerPincode
@@ -149,6 +151,7 @@ router.post("/submit", async (req, res) => {
     name: String(customerName).trim(),
     number: sanitizePhone(customerNumber),
     email: String(customerEmail).trim(),
+    address: String(customerAddress).trim(),
     city: String(customerCity).trim(),
     state: String(customerState).trim(),
     pincode: String(customerPincode).trim()
@@ -222,6 +225,7 @@ router.post("/submit", async (req, res) => {
     customerName: customer.name,
     customerNumber: customer.number,
     customerEmail: customer.email,
+    customerAddress: customer.address,
     customerCity: customer.city,
     customerState: customer.state,
     customerPincode: customer.pincode,

@@ -191,7 +191,7 @@
       const orders = await api("/admin/api/orders");
       ordersBody.innerHTML = "";
       if (orders.length === 0) {
-        ordersBody.innerHTML = '<tr><td colspan="13" class="muted">No orders yet.</td></tr>';
+        ordersBody.innerHTML = '<tr><td colspan="14" class="muted">No orders yet.</td></tr>';
         return;
       }
       orders.forEach((o) => {
@@ -206,6 +206,7 @@
           <td>${escapeHtml(o.customerName || "")}</td>
           <td>${escapeHtml(o.customerNumber || "")}</td>
           <td>${escapeHtml(o.customerEmail || "")}</td>
+          <td>${escapeHtml(o.customerAddress || "")}</td>
           <td>${escapeHtml(o.customerCity || "")}</td>
           <td>${escapeHtml(o.customerState || "")}</td>
           <td>${escapeHtml(o.customerPincode || "")}</td>
@@ -214,7 +215,7 @@
         ordersBody.appendChild(tr);
       });
     } catch (err) {
-      ordersBody.innerHTML = `<tr><td colspan="13" class="error-text">${escapeHtml(err.message)}</td></tr>`;
+      ordersBody.innerHTML = `<tr><td colspan="14" class="error-text">${escapeHtml(err.message)}</td></tr>`;
     }
   }
 

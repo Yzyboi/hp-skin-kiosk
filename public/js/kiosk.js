@@ -20,6 +20,7 @@
     customerName: "",
     customerNumber: "",
     customerEmail: "",
+    customerAddress: "",
     customerCity: "",
     customerState: "",
     customerPincode: ""
@@ -44,6 +45,7 @@
     customerName: document.getElementById("customerName"),
     customerNumber: document.getElementById("customerNumber"),
     customerEmail: document.getElementById("customerEmail"),
+    customerAddress: document.getElementById("customerAddress"),
     customerCity: document.getElementById("customerCity"),
     customerState: document.getElementById("customerState"),
     customerPincode: document.getElementById("customerPincode"),
@@ -152,6 +154,7 @@
     state.customerName = "";
     state.customerNumber = "";
     state.customerEmail = "";
+    state.customerAddress = "";
     state.customerCity = "";
     state.customerState = "";
     state.customerPincode = "";
@@ -161,7 +164,7 @@
     document.querySelectorAll(".pick-card").forEach((c) => c.classList.remove("selected"));
     el.skuContinueBtn.disabled = true;
     el.designContinueBtn.disabled = true;
-    [el.customerName, el.customerNumber, el.customerEmail, el.customerCity, el.customerState, el.customerPincode].forEach(
+    [el.customerName, el.customerNumber, el.customerEmail, el.customerAddress, el.customerCity, el.customerState, el.customerPincode].forEach(
       (input) => (input.value = "")
     );
     el.customerInfoError.hidden = true;
@@ -555,6 +558,7 @@
       el.customerName,
       el.customerNumber,
       el.customerEmail,
+      el.customerAddress,
       el.customerCity,
       el.customerState,
       el.customerPincode
@@ -562,7 +566,7 @@
     el.submitOrderBtn.disabled = !filled;
   }
 
-  [el.customerName, el.customerNumber, el.customerEmail, el.customerCity, el.customerState, el.customerPincode].forEach(
+  [el.customerName, el.customerNumber, el.customerEmail, el.customerAddress, el.customerCity, el.customerState, el.customerPincode].forEach(
     (input) => input.addEventListener("input", updateSubmitOrderState)
   );
 
@@ -572,6 +576,7 @@
     const name = el.customerName.value.trim();
     const number = el.customerNumber.value.trim();
     const email = el.customerEmail.value.trim();
+    const address = el.customerAddress.value.trim();
     const city = el.customerCity.value.trim();
     const stateVal = el.customerState.value.trim();
     const pincode = el.customerPincode.value.trim();
@@ -579,6 +584,7 @@
     if (!name) return showCustomerError("Enter your full name.");
     if (!isValidPhoneClient(number)) return showCustomerError("Enter a valid phone number.");
     if (!isValidEmailClient(email)) return showCustomerError("Enter a valid email address.");
+    if (!address) return showCustomerError("Enter your address.");
     if (!city) return showCustomerError("Enter your city.");
     if (!stateVal) return showCustomerError("Enter your state.");
     if (!isValidPincodeClient(pincode)) return showCustomerError("Enter a valid pincode.");
@@ -586,6 +592,7 @@
     state.customerName = name;
     state.customerNumber = number;
     state.customerEmail = email;
+    state.customerAddress = address;
     state.customerCity = city;
     state.customerState = stateVal;
     state.customerPincode = pincode;
@@ -607,6 +614,7 @@
           customerName: name,
           customerNumber: number,
           customerEmail: email,
+          customerAddress: address,
           customerCity: city,
           customerState: stateVal,
           customerPincode: pincode

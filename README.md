@@ -9,11 +9,12 @@ name pending final naming; the header logomark is a placeholder pending
 the real HP World logomark.
 
 **Not anonymous.** Every finalized order captures the customer's name,
-phone, email, and city/state/pincode on a dedicated screen after the
-design is locked in. That data is included in the spec-sheet email sent
-to the print provider and persisted server-side (`data/orders.json`) so
-it shows up in the admin console's Orders view and date-range `.xlsx`
-export, alongside the unique reference ID.
+phone, email, and address (street address, city, state, pincode) on a
+dedicated screen after the design is locked in. That data is included in
+the spec-sheet email sent to the print provider and persisted
+server-side (`data/orders.json`) so it shows up in the admin console's
+Orders view and date-range `.xlsx` export, alongside the unique
+reference ID.
 
 ## Stack
 
@@ -132,7 +133,7 @@ follow-up. The admin dashboard's Orders section shows a live table of
 every order, and "Export orders" downloads an `.xlsx` for a given date
 range (inclusive, matched against the order's timestamp) with every
 field - reference ID, store/SKU/design/initials/accent/motif, and the
-customer's name/phone/email/city/state/pincode.
+customer's name/phone/email/address/city/state/pincode.
 
 ## Print-ready CMYK PDF
 

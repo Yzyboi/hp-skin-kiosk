@@ -193,6 +193,7 @@ function orderToRow(o) {
     o.customerName,
     o.customerNumber,
     o.customerEmail,
+    o.customerAddress,
     o.customerCity,
     o.customerState,
     o.customerPincode,
