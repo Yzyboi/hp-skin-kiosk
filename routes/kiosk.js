@@ -1,22 +1,43 @@
-// Customer-facing kiosk API. Anonymous by design: only store selection,
-// SKU, design, initials, and a generated reference ID ever flow through
-// here. No name/phone/email/personal data is accepted or logged.
+// Customer-facing kiosk API.
+//
+// NOTE: this used to be fully anonymous (no personal data captured or
+// logged, per the original spec). It now captures customer name/phone/
+// email/address on a dedicated screen after the design is finalized -
+// see the Customer Info screen in public/js/kiosk.js. That data is
+// included in the print-provider email and persisted via ordersStore so
+// it's visible in the admin console's Orders view/export.
 
 const express = require("express");
 const crypto = require("crypto");
 
-const skus = require("../config/skus");
 const designs = require("../config/designs");
 const accentColors = require("../config/accentColors");
 const motifs = require("../config/motifs");
 const { readStores, findStoreById } = require("../lib/storesStore");
-const { sanitizeInitials, isValidInitials } = require("../lib/validators");
+const { readSkus, findSkuById } = require("../lib/skusStore");
+const { appendOrder } = require("../lib/ordersStore");
+const {
+  sanitizeInitials,
+  isValidInitials,
+  sanitizePhone,
+  validateCustomerInfo
+} = require("../lib/validators");
 const { sendSpecSheetEmail } = require("../lib/emailProvider");
 
 const router = express.Router();
 
 function generateReferenceId() {
   return "HP-SKIN-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+}
+
+function publicSkuShape(s) {
+  return {
+    id: s.skuId,
+    familyName: s.familyName,
+    widthMm: s.widthMm,
+    heightMm: s.heightMm,
+    cornerRadiusMm: s.cornerRadiusMm
+  };
 }
 
 // Store picker: name only, no credentials, no print-provider data exposed.
@@ -26,7 +47,7 @@ router.get("/stores", (req, res) => {
 });
 
 router.get("/skus", (req, res) => {
-  res.json(skus);
+  res.json(readSkus().map(publicSkuShape));
 });
 
 router.get("/designs", (req, res) => {
@@ -75,10 +96,23 @@ router.post("/submit", async (req, res) => {
     return res.status(400).json({ error: "Selected store no longer exists" });
   }
 
-  const { skuId, designId, accentId, motifId, previewPng } = req.body || {};
+  const {
+    skuId,
+    designId,
+    accentId,
+    motifId,
+    previewPng,
+    customerName,
+    customerNumber,
+    customerEmail,
+    customerCity,
+    customerState,
+    customerPincode
+  } = req.body || {};
   const initials = sanitizeInitials(req.body && req.body.initials);
 
-  const sku = skus.find((s) => s.id === skuId);
+  const skuRow = findSkuById(skuId);
+  const sku = skuRow ? publicSkuShape(skuRow) : null;
   const design = designs.find((d) => d.id === designId);
   const accent = accentColors.find((a) => a.id === accentId);
   const motif = motifs.find((m) => m.id === motifId);
@@ -94,9 +128,30 @@ router.post("/submit", async (req, res) => {
     return res.status(400).json({ error: "Missing or invalid preview image" });
   }
 
+  const customerCheck = validateCustomerInfo({
+    name: customerName,
+    number: customerNumber,
+    email: customerEmail,
+    city: customerCity,
+    state: customerState,
+    pincode: customerPincode
+  });
+  if (!customerCheck.ok) {
+    return res.status(400).json({ error: customerCheck.reason });
+  }
+
   const previewPngBuffer = Buffer.from(previewPng.split(",")[1], "base64");
   const referenceId = generateReferenceId();
   const timestamp = new Date().toISOString();
+
+  const customer = {
+    name: String(customerName).trim(),
+    number: sanitizePhone(customerNumber),
+    email: String(customerEmail).trim(),
+    city: String(customerCity).trim(),
+    state: String(customerState).trim(),
+    pincode: String(customerPincode).trim()
+  };
 
   const specSheet = {
     designId: design.id,
@@ -111,9 +166,12 @@ router.post("/submit", async (req, res) => {
     region: store.region,
     printProviderName: store.printProviderName,
     referenceId,
-    timestamp
+    timestamp,
+    customer
   };
 
+  let emailStatus = "sent";
+  let emailError = null;
   try {
     await sendSpecSheetEmail({
       toAddresses: store.printProviderEmails,
@@ -121,7 +179,40 @@ router.post("/submit", async (req, res) => {
       previewPngBuffer
     });
   } catch (err) {
+    emailStatus = "failed";
+    emailError = err.message;
     console.error(`[submit] email send failed for ${referenceId}:`, err.message);
+  }
+
+  appendOrder({
+    referenceId,
+    timestamp,
+    storeId: store.storeId,
+    storeName: store.storeName,
+    region: store.region,
+    printProviderName: store.printProviderName,
+    skuId: sku.id,
+    skuFamily: sku.familyName,
+    widthMm: sku.widthMm,
+    heightMm: sku.heightMm,
+    designId: design.id,
+    designName: design.name,
+    initials,
+    accentId: accent.id,
+    accentName: accent.name,
+    motifId: motif.id,
+    motifName: motif.name,
+    customerName: customer.name,
+    customerNumber: customer.number,
+    customerEmail: customer.email,
+    customerCity: customer.city,
+    customerState: customer.state,
+    customerPincode: customer.pincode,
+    emailStatus,
+    emailError
+  });
+
+  if (emailStatus === "failed") {
     return res.status(502).json({
       error: "We couldn't send your order to the print provider. Please try again or ask a store associate for help.",
       referenceId

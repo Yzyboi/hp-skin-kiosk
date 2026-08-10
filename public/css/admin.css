@@ -73,7 +73,7 @@ body {
   margin-bottom: 6px;
 }
 
-input[type="text"], input[type="password"], input[type="file"] {
+input[type="text"], input[type="password"], input[type="file"], input[type="date"] {
   border: 2px solid var(--hp-gray-200);
   border-radius: 10px;
   padding: 12px 14px;
@@ -81,7 +81,7 @@ input[type="text"], input[type="password"], input[type="file"] {
   font-family: inherit;
   outline: none;
 }
-input[type="text"]:focus, input[type="password"]:focus { border-color: var(--hp-blue); }
+input[type="text"]:focus, input[type="password"]:focus, input[type="date"]:focus { border-color: var(--hp-blue); }
 
 .btn {
   border: none;
@@ -121,6 +121,16 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--hp-
   gap: 24px;
 }
 
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--hp-gray-600);
+  margin: 12px 0 -8px;
+}
+.section-title:first-child { margin-top: 0; }
+
 .admin-card {
   background: var(--hp-white);
   border-radius: 14px;
@@ -128,7 +138,7 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--hp-
   padding: 24px 28px;
 }
 
-.admin-card h2 { font-size: 18px; margin-bottom: 6px; }
+.admin-card h3 { font-size: 18px; margin-bottom: 6px; }
 .muted { color: var(--hp-gray-600); font-size: 14px; margin-bottom: 16px; }
 
 .upload-row {
@@ -138,8 +148,20 @@ input[type="text"]:focus, input[type="password"]:focus { border-color: var(--hp-
   flex-wrap: wrap;
 }
 
+.date-range-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.date-range-row .field-label { margin-top: 0; }
+.date-range-row .btn { margin-bottom: 0; }
+
 .upload-summary { margin-top: 20px; }
-.upload-summary h3 { font-size: 14px; margin-bottom: 10px; }
+.upload-summary h4 { font-size: 14px; margin-bottom: 10px; }
+
+.table-scroll { overflow-x: auto; }
+.table-scroll .data-table { min-width: 640px; }
 
 .summary-stats { display: flex; gap: 24px; margin-bottom: 16px; }
 .stat { display: flex; flex-direction: column; }

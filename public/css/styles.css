@@ -209,6 +209,28 @@ h1 {
   margin: 0 0 28px;
 }
 
+.text-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  font-size: 15px;
+  border: 1px solid var(--ink-20);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  margin-bottom: 16px;
+  outline: none;
+}
+
+.text-input:focus { border-color: var(--brand-blue); }
+
+.address-row {
+  display: flex;
+  gap: 12px;
+}
+
+.address-row .text-input { flex: 1; min-width: 0; }
+
 .error-text {
   color: var(--error);
   font-size: 13px;
@@ -532,4 +554,5 @@ h1 {
   h1 { font-size: 26px; }
   .screen[data-screen="store"] h1 { font-size: 30px; }
   .store-decoration { display: none; }
+  .address-row { flex-direction: column; gap: 0; }
 }

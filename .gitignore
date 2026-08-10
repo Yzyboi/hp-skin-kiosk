@@ -3,3 +3,7 @@ node_modules/
 *.log
 .DS_Store
 package-lock.json
+
+# Orders are transactional/customer data generated at runtime, not a
+# seeded placeholder dataset like stores.json/skus.json - never commit it.
+data/orders.json

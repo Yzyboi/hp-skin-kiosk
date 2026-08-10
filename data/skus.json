@@ -1,0 +1,34 @@
+[
+  {
+    "skuId": "omnibook-5",
+    "familyName": "OmniBook 5",
+    "widthMm": 312,
+    "heightMm": 220,
+    "cornerRadiusMm": 8,
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "skuId": "omnibook-7",
+    "familyName": "OmniBook 7",
+    "widthMm": 336,
+    "heightMm": 232,
+    "cornerRadiusMm": 8,
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "skuId": "pavilion-14",
+    "familyName": "Pavilion 14",
+    "widthMm": 320,
+    "heightMm": 215,
+    "cornerRadiusMm": 6,
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "skuId": "pavilion-16",
+    "familyName": "Pavilion 16",
+    "widthMm": 358,
+    "heightMm": 245,
+    "cornerRadiusMm": 6,
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  }
+]

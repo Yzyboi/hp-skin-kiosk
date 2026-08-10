@@ -25,6 +25,7 @@
       <div class="progress-seg" data-step="2"></div>
       <div class="progress-seg" data-step="3"></div>
       <div class="progress-seg" data-step="4"></div>
+      <div class="progress-seg" data-step="5"></div>
     </div>
 
     <main class="screens">
@@ -115,7 +116,37 @@
         </div>
       </section>
 
-      <!-- Screen 5: Confirmation -->
+      <!-- Screen 5: Customer info -->
+      <section class="screen" data-screen="customer-info">
+        <div class="screen-inner narrow">
+          <h1>Your details.</h1>
+          <p class="subtitle">We'll use this to confirm your order and coordinate pickup.</p>
+
+          <label class="field-label" for="customerName">Full Name</label>
+          <input id="customerName" class="text-input" type="text" autocomplete="name" />
+
+          <label class="field-label" for="customerNumber">Phone Number</label>
+          <input id="customerNumber" class="text-input" type="tel" autocomplete="tel" />
+
+          <label class="field-label" for="customerEmail">Email</label>
+          <input id="customerEmail" class="text-input" type="email" autocomplete="email" />
+
+          <label class="field-label">Address</label>
+          <div class="address-row">
+            <input id="customerCity" class="text-input" type="text" placeholder="City" autocomplete="address-level2" />
+            <input id="customerState" class="text-input" type="text" placeholder="State" autocomplete="address-level1" />
+            <input id="customerPincode" class="text-input" type="text" placeholder="Pincode" autocomplete="postal-code" />
+          </div>
+
+          <p id="customerInfoError" class="error-text" hidden></p>
+          <div class="nav-row">
+            <button class="btn btn-secondary" data-action="back-to-customize">Back</button>
+            <button id="submitOrderBtn" class="btn btn-primary" disabled>Submit Order</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Screen 6: Confirmation -->
       <section class="screen" data-screen="confirm">
         <div class="screen-inner narrow">
           <div class="confirm-check">&#10003;</div>

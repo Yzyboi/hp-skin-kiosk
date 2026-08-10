@@ -16,53 +16,153 @@
   </header>
 
   <main class="admin-main">
+    <h2 class="section-title">Stores</h2>
     <section class="admin-card">
-      <h2>1. Download template</h2>
+      <h3>Download template</h3>
       <p class="muted">Grab the .xlsx template with the required header row and an example row.</p>
-      <a class="btn btn-secondary" href="/admin/api/template" download>Download store template (.xlsx)</a>
+      <a class="btn btn-secondary" href="/admin/api/stores/template" download>Download store template (.xlsx)</a>
     </section>
 
     <section class="admin-card">
-      <h2>2. Upload store data</h2>
+      <h3>Upload store data</h3>
       <p class="muted">
         Rows are merged by <b>Store ID</b>: existing IDs are updated, new IDs are added, and stores
         not present in the file are left untouched. Malformed rows are skipped individually.
       </p>
-      <form id="uploadForm" class="upload-row">
-        <input id="fileInput" type="file" accept=".xlsx" required />
+      <form id="storeUploadForm" class="upload-row">
+        <input id="storeFileInput" type="file" accept=".xlsx" required />
         <button type="submit" class="btn btn-primary">Upload</button>
       </form>
-      <p id="uploadError" class="error-text" hidden></p>
+      <p id="storeUploadError" class="error-text" hidden></p>
 
-      <div id="uploadSummary" class="upload-summary" hidden>
-        <h3>Upload summary</h3>
+      <div id="storeUploadSummary" class="upload-summary" hidden>
+        <h4>Upload summary</h4>
         <div class="summary-stats">
-          <div class="stat"><span id="statAdded" class="stat-num">0</span><span class="stat-label">Added</span></div>
-          <div class="stat"><span id="statUpdated" class="stat-num">0</span><span class="stat-label">Updated</span></div>
-          <div class="stat"><span id="statSkipped" class="stat-num">0</span><span class="stat-label">Skipped</span></div>
+          <div class="stat"><span id="storeStatAdded" class="stat-num">0</span><span class="stat-label">Added</span></div>
+          <div class="stat"><span id="storeStatUpdated" class="stat-num">0</span><span class="stat-label">Updated</span></div>
+          <div class="stat"><span id="storeStatSkipped" class="stat-num">0</span><span class="stat-label">Skipped</span></div>
         </div>
-        <table id="skippedTable" class="data-table" hidden>
+        <table id="storeSkippedTable" class="data-table" hidden>
           <thead><tr><th>Row</th><th>Reason</th></tr></thead>
-          <tbody id="skippedBody"></tbody>
+          <tbody id="storeSkippedBody"></tbody>
         </table>
       </div>
     </section>
 
     <section class="admin-card">
-      <h2>3. Current store data</h2>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Store ID</th>
-            <th>Store Name</th>
-            <th>Region</th>
-            <th>Print Provider Name</th>
-            <th>Print Provider Email(s)</th>
-            <th>Last Updated</th>
-          </tr>
-        </thead>
-        <tbody id="storesBody"></tbody>
-      </table>
+      <h3>Current store data</h3>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Store ID</th>
+              <th>Store Name</th>
+              <th>Region</th>
+              <th>Print Provider Name</th>
+              <th>Print Provider Email(s)</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody id="storesBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <h2 class="section-title">SKUs</h2>
+    <section class="admin-card">
+      <h3>Download template</h3>
+      <p class="muted">Grab the .xlsx template with the required header row and an example row.</p>
+      <a class="btn btn-secondary" href="/admin/api/skus/template" download>Download SKU template (.xlsx)</a>
+    </section>
+
+    <section class="admin-card">
+      <h3>Upload SKU data</h3>
+      <p class="muted">
+        Rows are merged by <b>SKU ID</b>: existing IDs are updated, new IDs are added, and SKUs
+        not present in the file are left untouched. Malformed rows are skipped individually.
+        These are the models shown on the kiosk's "Choose your laptop" screen.
+      </p>
+      <form id="skuUploadForm" class="upload-row">
+        <input id="skuFileInput" type="file" accept=".xlsx" required />
+        <button type="submit" class="btn btn-primary">Upload</button>
+      </form>
+      <p id="skuUploadError" class="error-text" hidden></p>
+
+      <div id="skuUploadSummary" class="upload-summary" hidden>
+        <h4>Upload summary</h4>
+        <div class="summary-stats">
+          <div class="stat"><span id="skuStatAdded" class="stat-num">0</span><span class="stat-label">Added</span></div>
+          <div class="stat"><span id="skuStatUpdated" class="stat-num">0</span><span class="stat-label">Updated</span></div>
+          <div class="stat"><span id="skuStatSkipped" class="stat-num">0</span><span class="stat-label">Skipped</span></div>
+        </div>
+        <table id="skuSkippedTable" class="data-table" hidden>
+          <thead><tr><th>Row</th><th>Reason</th></tr></thead>
+          <tbody id="skuSkippedBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="admin-card">
+      <h3>Current SKU data</h3>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>SKU ID</th>
+              <th>Family Name</th>
+              <th>Width (mm)</th>
+              <th>Height (mm)</th>
+              <th>Corner Radius (mm)</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody id="skusBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <h2 class="section-title">Orders</h2>
+    <section class="admin-card">
+      <h3>Export orders</h3>
+      <p class="muted">Download every order placed within a date range as an .xlsx, including customer details and the reference ID sent to the print provider.</p>
+      <div class="date-range-row">
+        <div>
+          <label class="field-label" for="ordersFrom">From</label>
+          <input id="ordersFrom" type="date" />
+        </div>
+        <div>
+          <label class="field-label" for="ordersTo">To</label>
+          <input id="ordersTo" type="date" />
+        </div>
+        <button id="exportOrdersBtn" class="btn btn-primary">Download orders (.xlsx)</button>
+      </div>
+      <p id="ordersExportError" class="error-text" hidden></p>
+    </section>
+
+    <section class="admin-card">
+      <h3>Recent orders</h3>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Reference ID</th>
+              <th>Timestamp</th>
+              <th>Store</th>
+              <th>SKU</th>
+              <th>Design</th>
+              <th>Initials</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>City</th>
+              <th>State</th>
+              <th>Pincode</th>
+              <th>Email Status</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 

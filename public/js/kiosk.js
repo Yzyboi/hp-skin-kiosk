@@ -2,7 +2,7 @@
   "use strict";
 
   const PX_PER_MM = 5; // canvas render resolution for the exported PNG
-  const SCREEN_ORDER = ["store", "sku", "design", "customize", "confirm"];
+  const SCREEN_ORDER = ["store", "sku", "design", "customize", "customer-info", "confirm"];
 
   const state = {
     storeId: null,
@@ -16,7 +16,13 @@
     designImage: null,
     accentId: "blue",
     motifId: "none",
-    initials: ""
+    initials: "",
+    customerName: "",
+    customerNumber: "",
+    customerEmail: "",
+    customerCity: "",
+    customerState: "",
+    customerPincode: ""
   };
 
   const el = {
@@ -35,6 +41,14 @@
     motifButtons: document.getElementById("motifButtons"),
     submitError: document.getElementById("submitError"),
     finalizeBtn: document.getElementById("finalizeBtn"),
+    customerName: document.getElementById("customerName"),
+    customerNumber: document.getElementById("customerNumber"),
+    customerEmail: document.getElementById("customerEmail"),
+    customerCity: document.getElementById("customerCity"),
+    customerState: document.getElementById("customerState"),
+    customerPincode: document.getElementById("customerPincode"),
+    customerInfoError: document.getElementById("customerInfoError"),
+    submitOrderBtn: document.getElementById("submitOrderBtn"),
     previewBox: document.getElementById("previewBox"),
     previewImg: document.getElementById("previewImg"),
     previewMotifZone: document.getElementById("previewMotifZone"),
@@ -135,12 +149,23 @@
     state.accentId = "blue";
     state.motifId = "none";
     state.initials = "";
+    state.customerName = "";
+    state.customerNumber = "";
+    state.customerEmail = "";
+    state.customerCity = "";
+    state.customerState = "";
+    state.customerPincode = "";
     el.initialsInput.value = "";
     el.storeSelect.value = "";
     el.storeContinueBtn.disabled = true;
     document.querySelectorAll(".pick-card").forEach((c) => c.classList.remove("selected"));
     el.skuContinueBtn.disabled = true;
     el.designContinueBtn.disabled = true;
+    [el.customerName, el.customerNumber, el.customerEmail, el.customerCity, el.customerState, el.customerPincode].forEach(
+      (input) => (input.value = "")
+    );
+    el.customerInfoError.hidden = true;
+    el.submitOrderBtn.disabled = true;
     await loadStores();
     showScreen("store");
   }
@@ -491,8 +516,8 @@
     return canvas.toDataURL("image/png");
   }
 
-  // ---------- Finalize / submit ----------
-  el.finalizeBtn.addEventListener("click", async () => {
+  // ---------- Finalize (design is locked in, move to customer info) ----------
+  el.finalizeBtn.addEventListener("click", () => {
     el.submitError.hidden = true;
 
     if (!/^[A-Z]{1,3}$/.test(state.initials)) {
@@ -501,8 +526,72 @@
       return;
     }
 
-    el.finalizeBtn.disabled = true;
-    el.finalizeBtn.textContent = "Sending...";
+    showScreen("customer-info");
+  });
+
+  document.querySelector('[data-action="back-to-customize"]').addEventListener("click", () => showScreen("customize"));
+
+  // ---------- Screen 5: Customer info ----------
+  function isValidEmailClient(v) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
+  }
+
+  function isValidPhoneClient(v) {
+    const digits = String(v || "").replace(/\D/g, "");
+    return digits.length >= 7 && digits.length <= 15;
+  }
+
+  function isValidPincodeClient(v) {
+    return /^[A-Za-z0-9 -]{3,10}$/.test(String(v || "").trim());
+  }
+
+  function showCustomerError(message) {
+    el.customerInfoError.textContent = message;
+    el.customerInfoError.hidden = false;
+  }
+
+  function updateSubmitOrderState() {
+    const filled = [
+      el.customerName,
+      el.customerNumber,
+      el.customerEmail,
+      el.customerCity,
+      el.customerState,
+      el.customerPincode
+    ].every((input) => input.value.trim() !== "");
+    el.submitOrderBtn.disabled = !filled;
+  }
+
+  [el.customerName, el.customerNumber, el.customerEmail, el.customerCity, el.customerState, el.customerPincode].forEach(
+    (input) => input.addEventListener("input", updateSubmitOrderState)
+  );
+
+  el.submitOrderBtn.addEventListener("click", async () => {
+    el.customerInfoError.hidden = true;
+
+    const name = el.customerName.value.trim();
+    const number = el.customerNumber.value.trim();
+    const email = el.customerEmail.value.trim();
+    const city = el.customerCity.value.trim();
+    const stateVal = el.customerState.value.trim();
+    const pincode = el.customerPincode.value.trim();
+
+    if (!name) return showCustomerError("Enter your full name.");
+    if (!isValidPhoneClient(number)) return showCustomerError("Enter a valid phone number.");
+    if (!isValidEmailClient(email)) return showCustomerError("Enter a valid email address.");
+    if (!city) return showCustomerError("Enter your city.");
+    if (!stateVal) return showCustomerError("Enter your state.");
+    if (!isValidPincodeClient(pincode)) return showCustomerError("Enter a valid pincode.");
+
+    state.customerName = name;
+    state.customerNumber = number;
+    state.customerEmail = email;
+    state.customerCity = city;
+    state.customerState = stateVal;
+    state.customerPincode = pincode;
+
+    el.submitOrderBtn.disabled = true;
+    el.submitOrderBtn.textContent = "Submitting...";
 
     try {
       const previewPng = renderFinalCanvas();
@@ -514,7 +603,13 @@
           accentId: state.accentId,
           motifId: state.motifId,
           initials: state.initials,
-          previewPng
+          previewPng,
+          customerName: name,
+          customerNumber: number,
+          customerEmail: email,
+          customerCity: city,
+          customerState: stateVal,
+          customerPincode: pincode
         })
       });
       showConfirmScreen(result.referenceId, true, "Your order has been sent to the print provider.");
@@ -526,13 +621,11 @@
           err.data.error || "We couldn't send your order to the print provider."
         );
       } else {
-        el.submitError.textContent =
-          (err.data && err.data.error) || "Something went wrong sending your order. Please try again.";
-        el.submitError.hidden = false;
+        showCustomerError((err.data && err.data.error) || "Something went wrong submitting your order. Please try again.");
       }
     } finally {
-      el.finalizeBtn.disabled = false;
-      el.finalizeBtn.textContent = "Finalize";
+      el.submitOrderBtn.disabled = false;
+      el.submitOrderBtn.textContent = "Submit Order";
     }
   });
 
@@ -552,7 +645,7 @@
     showScreen("confirm");
   }
 
-  // ---------- Screen 5: Confirmation ----------
+  // ---------- Screen 6: Confirmation ----------
   el.startOverBtn.addEventListener("click", startOver);
 
   // ---------- Boot ----------
