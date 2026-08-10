@@ -8,8 +8,8 @@ const multer = require("multer");
 const bcrypt = require("bcryptjs");
 
 const { requireAdmin } = require("../middleware/auth");
-const { readStores, mergeStoreRows } = require("../lib/storesStore");
-const { readSkus, mergeSkuRows } = require("../lib/skusStore");
+const { readStores, mergeStoreRows, deleteStore } = require("../lib/storesStore");
+const { readSkus, mergeSkuRows, deleteSku } = require("../lib/skusStore");
 const { readOrders, findOrdersInRange } = require("../lib/ordersStore");
 const {
   STORE_HEADERS,
@@ -141,6 +141,12 @@ router.post(
   handleMergeUpload({ sheetName: "Stores", validateRow: validateStoreRow, mergeRows: mergeStoreRows })
 );
 
+router.delete("/api/stores/:storeId", requireAdmin, (req, res) => {
+  const deleted = deleteStore(req.params.storeId);
+  if (!deleted) return res.status(404).json({ error: "Store not found" });
+  res.json({ ok: true });
+});
+
 // --- SKUs ---------------------------------------------------------------
 
 router.get("/api/skus", requireAdmin, (req, res) => {
@@ -163,6 +169,12 @@ router.post(
   requireAdmin,
   handleMergeUpload({ sheetName: "SKUs", validateRow: validateSkuRow, mergeRows: mergeSkuRows })
 );
+
+router.delete("/api/skus/:skuId", requireAdmin, (req, res) => {
+  const deleted = deleteSku(req.params.skuId);
+  if (!deleted) return res.status(404).json({ error: "SKU not found" });
+  res.json({ ok: true });
+});
 
 // --- Orders -------------------------------------------------------------
 

@@ -99,6 +99,17 @@
     });
   }
 
+  // Shared confirm -> DELETE -> reload flow for Stores and SKUs.
+  async function deleteRecord(url, confirmMessage, onDone) {
+    if (!window.confirm(confirmMessage)) return;
+    try {
+      await api(url, { method: "DELETE" });
+      if (onDone) await onDone();
+    } catch (err) {
+      window.alert("Delete failed: " + err.message);
+    }
+  }
+
   // ---------- Stores ----------
   const storesBody = document.getElementById("storesBody");
   async function loadStores() {
@@ -107,7 +118,7 @@
       const stores = await api("/admin/api/stores");
       storesBody.innerHTML = "";
       if (stores.length === 0) {
-        storesBody.innerHTML = '<tr><td colspan="6" class="muted">No stores yet.</td></tr>';
+        storesBody.innerHTML = '<tr><td colspan="7" class="muted">No stores yet.</td></tr>';
         return;
       }
       stores.forEach((s) => {
@@ -119,12 +130,26 @@
           <td>${escapeHtml(s.printProviderName)}</td>
           <td>${escapeHtml((s.printProviderEmails || []).join(", "))}</td>
           <td>${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : ""}</td>
+          <td><button type="button" class="btn-delete" data-id="${escapeHtml(s.storeId)}">Delete</button></td>
         `;
         storesBody.appendChild(tr);
       });
     } catch (err) {
-      storesBody.innerHTML = `<tr><td colspan="6" class="error-text">${escapeHtml(err.message)}</td></tr>`;
+      storesBody.innerHTML = `<tr><td colspan="7" class="error-text">${escapeHtml(err.message)}</td></tr>`;
     }
+  }
+
+  if (storesBody) {
+    storesBody.addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-delete");
+      if (!btn) return;
+      const storeId = btn.dataset.id;
+      deleteRecord(
+        `/admin/api/stores/${encodeURIComponent(storeId)}`,
+        `Delete store "${storeId}"? This cannot be undone.`,
+        loadStores
+      );
+    });
   }
 
   setupUpload({
@@ -149,7 +174,7 @@
       const skus = await api("/admin/api/skus");
       skusBody.innerHTML = "";
       if (skus.length === 0) {
-        skusBody.innerHTML = '<tr><td colspan="6" class="muted">No SKUs yet.</td></tr>';
+        skusBody.innerHTML = '<tr><td colspan="7" class="muted">No SKUs yet.</td></tr>';
         return;
       }
       skus.forEach((s) => {
@@ -161,12 +186,26 @@
           <td>${escapeHtml(s.heightMm)}</td>
           <td>${s.cornerRadiusMm !== undefined && s.cornerRadiusMm !== null ? escapeHtml(s.cornerRadiusMm) : ""}</td>
           <td>${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : ""}</td>
+          <td><button type="button" class="btn-delete" data-id="${escapeHtml(s.skuId)}">Delete</button></td>
         `;
         skusBody.appendChild(tr);
       });
     } catch (err) {
-      skusBody.innerHTML = `<tr><td colspan="6" class="error-text">${escapeHtml(err.message)}</td></tr>`;
+      skusBody.innerHTML = `<tr><td colspan="7" class="error-text">${escapeHtml(err.message)}</td></tr>`;
     }
+  }
+
+  if (skusBody) {
+    skusBody.addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-delete");
+      if (!btn) return;
+      const skuId = btn.dataset.id;
+      deleteRecord(
+        `/admin/api/skus/${encodeURIComponent(skuId)}`,
+        `Delete SKU "${skuId}"? This cannot be undone.`,
+        loadSkus
+      );
+    });
   }
 
   setupUpload({

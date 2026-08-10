@@ -123,6 +123,15 @@ processing, the dashboard shows counts of rows added / updated /
 skipped, with the specific reason and Excel row number for every skipped
 row.
 
+### Deleting stores/SKUs
+
+Uploads only ever add or update - they never delete. To remove a store
+or SKU record entirely, use the "Delete" button next to it in the
+dashboard's Current store data / Current SKU data tables (confirmation
+required; this is permanent). Deleting a store or SKU doesn't touch past
+orders - `data/orders.json` keeps its own copy of every field at the
+time the order was placed, so historical records stay intact.
+
 ## Orders
 
 Every finalized order (after the customer fills in the Customer Info
