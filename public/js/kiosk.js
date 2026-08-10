@@ -7,6 +7,7 @@
   const state = {
     storeId: null,
     storeName: null,
+    allStores: [],
     skus: [],
     designs: [],
     accentColors: [],
@@ -29,7 +30,8 @@
   const el = {
     startOverHeaderBtn: document.getElementById("startOverHeaderBtn"),
     progressBar: document.getElementById("progressBar"),
-    storeSelect: document.getElementById("storeSelect"),
+    storeSearchInput: document.getElementById("storeSearchInput"),
+    storeList: document.getElementById("storeList"),
     storeError: document.getElementById("storeError"),
     storeContinueBtn: document.getElementById("storeContinueBtn"),
     skuGrid: document.getElementById("skuGrid"),
@@ -100,29 +102,48 @@
   }
 
   // ---------- Screen 1: Store ----------
+  let pendingStoreId = null;
+
+  function renderStoreList(filterText) {
+    const q = String(filterText || "").trim().toLowerCase();
+    const filtered = q ? state.allStores.filter((s) => s.storeName.toLowerCase().includes(q)) : state.allStores;
+
+    el.storeList.innerHTML = "";
+    if (filtered.length === 0) {
+      el.storeList.innerHTML = '<p class="store-empty">No stores match your search.</p>';
+      return;
+    }
+    filtered.forEach((store) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "store-option" + (store.storeId === pendingStoreId ? " selected" : "");
+      btn.textContent = store.storeName;
+      btn.addEventListener("click", () => {
+        pendingStoreId = store.storeId;
+        renderStoreList(el.storeSearchInput.value);
+        el.storeContinueBtn.disabled = false;
+      });
+      el.storeList.appendChild(btn);
+    });
+  }
+
   async function loadStores() {
     el.storeError.hidden = true;
-    el.storeSelect.innerHTML = '<option value="">Choose a store&hellip;</option>';
+    pendingStoreId = null;
+    el.storeContinueBtn.disabled = true;
     try {
-      const stores = await api("/api/stores");
-      stores.forEach((store) => {
-        const opt = document.createElement("option");
-        opt.value = store.storeId;
-        opt.textContent = store.storeName;
-        el.storeSelect.appendChild(opt);
-      });
+      state.allStores = await api("/api/stores");
+      renderStoreList(el.storeSearchInput.value);
     } catch (err) {
       el.storeError.textContent = "Couldn't load stores. " + err.message;
       el.storeError.hidden = false;
     }
   }
 
-  el.storeSelect.addEventListener("change", () => {
-    el.storeContinueBtn.disabled = !el.storeSelect.value;
-  });
+  el.storeSearchInput.addEventListener("input", () => renderStoreList(el.storeSearchInput.value));
 
   el.storeContinueBtn.addEventListener("click", async () => {
-    const storeId = el.storeSelect.value;
+    const storeId = pendingStoreId;
     if (!storeId) return;
     el.storeError.hidden = true;
     try {
@@ -160,7 +181,7 @@
     state.customerState = "";
     state.customerPincode = "";
     el.initialsInput.value = "";
-    el.storeSelect.value = "";
+    el.storeSearchInput.value = "";
     el.storeContinueBtn.disabled = true;
     document.querySelectorAll(".pick-card").forEach((c) => c.classList.remove("selected"));
     el.skuContinueBtn.disabled = true;

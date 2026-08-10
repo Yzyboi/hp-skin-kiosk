@@ -35,10 +35,9 @@
         <div class="screen-inner narrow store-inner">
           <h1>Welcome to OmniBook Skin Studio.</h1>
           <p class="subtitle">Select your store to begin.</p>
-          <label class="field-label" for="storeSelect">Store</label>
-          <select id="storeSelect" class="select-input">
-            <option value="">Choose a store&hellip;</option>
-          </select>
+          <label class="field-label" for="storeSearchInput">Store</label>
+          <input id="storeSearchInput" class="text-input" type="text" placeholder="Search for your store&hellip;" autocomplete="off" />
+          <div id="storeList" class="store-list"></div>
           <p class="hint">Per-store staff context for this session.</p>
           <p id="storeError" class="error-text" hidden></p>
           <button id="storeContinueBtn" class="btn btn-primary" disabled>Continue</button>
