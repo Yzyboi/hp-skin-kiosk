@@ -23,6 +23,7 @@ const {
   validateCustomerInfo
 } = require("../lib/validators");
 const { sendSpecSheetEmail } = require("../lib/emailProvider");
+const { buildCmykPdf } = require("../lib/printAsset");
 
 const router = express.Router();
 
@@ -172,11 +173,27 @@ router.post("/submit", async (req, res) => {
 
   let emailStatus = "sent";
   let emailError = null;
+
+  // Print-ready CMYK conversion is a best-effort enhancement - if it fails
+  // for some reason, the order still goes out with just the RGB PNG
+  // rather than blocking the customer's submission entirely.
+  let cmykPdfBuffer = null;
+  try {
+    cmykPdfBuffer = await buildCmykPdf({
+      pngBuffer: previewPngBuffer,
+      widthMm: sku.widthMm,
+      heightMm: sku.heightMm
+    });
+  } catch (err) {
+    console.error(`[submit] CMYK PDF generation failed for ${referenceId}:`, err.message);
+  }
+
   try {
     await sendSpecSheetEmail({
       toAddresses: store.printProviderEmails,
       specSheet,
-      previewPngBuffer
+      previewPngBuffer,
+      cmykPdfBuffer
     });
   } catch (err) {
     emailStatus = "failed";

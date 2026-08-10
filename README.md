@@ -19,6 +19,9 @@ export, alongside the unique reference ID.
 
 - Node.js + Express, plain HTML/CSS/JS front end (no build step)
 - Nodemailer over Gmail SMTP for order emails to print providers
+- sharp + pdfkit to convert the customer-facing RGB preview into a
+  print-ready CMYK PDF for the print provider (see "Print-ready CMYK
+  PDF" below)
 - No database - runtime data (stores, SKUs, orders) lives in flat JSON
   files under `data/`; stores and SKUs are admin-managed via Excel
   upload, orders are appended automatically as customers check out
@@ -130,6 +133,31 @@ every order, and "Export orders" downloads an `.xlsx` for a given date
 range (inclusive, matched against the order's timestamp) with every
 field - reference ID, store/SKU/design/initials/accent/motif, and the
 customer's name/phone/email/city/state/pincode.
+
+## Print-ready CMYK PDF
+
+Browsers/`<canvas>`/PNG are RGB-only, so the customer-facing live preview
+and its exported PNG are always RGB. `POST /api/submit` converts that PNG
+server-side into a CMYK PDF before the order email is sent, via
+`lib/printAsset.js`:
+
+1. `sharp` converts the RGB PNG to a CMYK JPEG (the standard way to get a
+   correctly Adobe-tagged CMYK JPEG out of libvips).
+2. `pdfkit` embeds that JPEG directly into a single-page PDF sized to the
+   SKU's true physical print dimensions (millimeters converted to PDF
+   points), so the print team can place it 1:1.
+
+The print-provider email gets **both** attachments: `{referenceId}.png`
+(RGB, for a quick on-screen look) and `{referenceId}-cmyk.pdf`
+(CMYK, the print-ready file). If the CMYK conversion fails for any
+reason, that's logged server-side and the order still goes out with just
+the PNG rather than blocking the customer's submission.
+
+This currently uses libvips' generic RGB→CMYK transform - not calibrated
+to any specific press. Once you have an ICC profile from the actual print
+provider, `lib/printAsset.js` documents the one-line swap to use it
+instead (drop the `.icc` file in, pass it to sharp's colourspace
+conversion) for print-accurate color instead of the generic default.
 
 ## Adding real SKUs, designs, accent colors, and motifs
 
