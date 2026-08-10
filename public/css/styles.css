@@ -231,6 +231,29 @@ h1 {
 
 .address-row .text-input { flex: 1; min-width: 0; }
 
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 8px 0 4px;
+  cursor: pointer;
+}
+
+.consent-row input[type="checkbox"] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--brand-blue);
+  cursor: pointer;
+}
+
+.consent-row span {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-60);
+}
+
 .error-text {
   color: var(--error);
   font-size: 13px;

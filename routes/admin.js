@@ -197,6 +197,7 @@ function orderToRow(o) {
     o.customerCity,
     o.customerState,
     o.customerPincode,
+    o.consentGiven ? "Yes" : "No",
     o.emailStatus
   ];
 }

@@ -132,8 +132,9 @@ field (`sent` / `failed`) so a failed send is still visible for
 follow-up. The admin dashboard's Orders section shows a live table of
 every order, and "Export orders" downloads an `.xlsx` for a given date
 range (inclusive, matched against the order's timestamp) with every
-field - reference ID, store/SKU/design/initials/accent/motif, and the
-customer's name/phone/email/address/city/state/pincode.
+field - reference ID, store/SKU/design/initials/accent/motif, the
+customer's name/phone/email/address/city/state/pincode, and whether they
+checked the HP privacy-statement consent box (required to submit).
 
 ## Print-ready CMYK PDF
 

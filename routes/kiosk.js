@@ -109,7 +109,8 @@ router.post("/submit", async (req, res) => {
     customerAddress,
     customerCity,
     customerState,
-    customerPincode
+    customerPincode,
+    consent
   } = req.body || {};
   const initials = sanitizeInitials(req.body && req.body.initials);
 
@@ -141,6 +142,9 @@ router.post("/submit", async (req, res) => {
   });
   if (!customerCheck.ok) {
     return res.status(400).json({ error: customerCheck.reason });
+  }
+  if (consent !== true) {
+    return res.status(400).json({ error: "Consent to HP's privacy statement is required" });
   }
 
   const previewPngBuffer = Buffer.from(previewPng.split(",")[1], "base64");
@@ -229,6 +233,7 @@ router.post("/submit", async (req, res) => {
     customerCity: customer.city,
     customerState: customer.state,
     customerPincode: customer.pincode,
+    consentGiven: true,
     emailStatus,
     emailError
   });

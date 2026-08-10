@@ -49,6 +49,7 @@
     customerCity: document.getElementById("customerCity"),
     customerState: document.getElementById("customerState"),
     customerPincode: document.getElementById("customerPincode"),
+    consentCheckbox: document.getElementById("consentCheckbox"),
     customerInfoError: document.getElementById("customerInfoError"),
     submitOrderBtn: document.getElementById("submitOrderBtn"),
     previewBox: document.getElementById("previewBox"),
@@ -167,6 +168,7 @@
     [el.customerName, el.customerNumber, el.customerEmail, el.customerAddress, el.customerCity, el.customerState, el.customerPincode].forEach(
       (input) => (input.value = "")
     );
+    el.consentCheckbox.checked = false;
     el.customerInfoError.hidden = true;
     el.submitOrderBtn.disabled = true;
     await loadStores();
@@ -563,12 +565,13 @@
       el.customerState,
       el.customerPincode
     ].every((input) => input.value.trim() !== "");
-    el.submitOrderBtn.disabled = !filled;
+    el.submitOrderBtn.disabled = !(filled && el.consentCheckbox.checked);
   }
 
   [el.customerName, el.customerNumber, el.customerEmail, el.customerAddress, el.customerCity, el.customerState, el.customerPincode].forEach(
     (input) => input.addEventListener("input", updateSubmitOrderState)
   );
+  el.consentCheckbox.addEventListener("change", updateSubmitOrderState);
 
   el.submitOrderBtn.addEventListener("click", async () => {
     el.customerInfoError.hidden = true;
@@ -588,6 +591,9 @@
     if (!city) return showCustomerError("Enter your city.");
     if (!stateVal) return showCustomerError("Enter your state.");
     if (!isValidPincodeClient(pincode)) return showCustomerError("Enter a valid pincode.");
+    if (!el.consentCheckbox.checked) {
+      return showCustomerError("Please check the box to consent to HP's collection and use of your information.");
+    }
 
     state.customerName = name;
     state.customerNumber = number;
@@ -617,7 +623,8 @@
           customerAddress: address,
           customerCity: city,
           customerState: stateVal,
-          customerPincode: pincode
+          customerPincode: pincode,
+          consent: true
         })
       });
       showConfirmScreen(result.referenceId, true, "Your order has been sent to the print provider.");
