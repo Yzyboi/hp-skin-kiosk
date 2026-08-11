@@ -451,6 +451,7 @@ h1 {
 .preview-zone {
   display: flex;
   align-items: center;
+  overflow: hidden;
 }
 
 .preview-initials {

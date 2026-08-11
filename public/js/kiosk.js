@@ -325,8 +325,15 @@
   const measureCanvas = document.createElement("canvas");
   const measureCtx = measureCanvas.getContext("2d");
 
+  // No cap on how much customer text a design can accept means no fixed
+  // floor here either - a size floor that's reached before the text
+  // actually fits just means the overflow gets clipped by the zone's
+  // container instead of shrinking to fit, which reads as the text being
+  // cut off. The floor only exists to stop the loop at an unrenderable
+  // size, not to protect readability - very long input in a small zone
+  // will legitimately end up tiny rather than clipped.
   function fitFontSize(text, maxWidth, maxSize, fontFamily, minSize) {
-    const floor = minSize || 8;
+    const floor = minSize || 3;
     let size = Math.max(maxSize, floor);
     const safeText = text && text.length > 0 ? text : "M";
     measureCtx.font = `700 ${size}px "${fontFamily}", sans-serif`;
@@ -473,6 +480,15 @@
     const zw = (zone.widthPct / 100) * w;
     const zh = (zone.heightPct / 100) * h;
 
+    // Clipped to the zone rectangle itself (not just the canvas's rounded
+    // corners above) so the exported print file can never show text
+    // bleeding into the rest of the artwork, matching the live preview's
+    // overflow:hidden zone box.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(zx, zy, zw, zh);
+    ctx.clip();
+
     ctx.fillStyle = zone.color;
     const fontSize = fitFontSize(state.initials, zw * 0.94, zh * 0.85, zone.fontFamily);
     ctx.font = `700 ${fontSize}px "${zone.fontFamily}", sans-serif`;
@@ -487,6 +503,7 @@
       ctx.textAlign = "right";
     }
     ctx.fillText(state.initials, textX, zy + zh / 2);
+    ctx.restore();
 
     ctx.restore();
     return canvas.toDataURL("image/png");
