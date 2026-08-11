@@ -11,7 +11,6 @@ const express = require("express");
 const crypto = require("crypto");
 
 const accentColors = require("../config/accentColors");
-const motifs = require("../config/motifs");
 const { readStores, findStoreById } = require("../lib/storesStore");
 const { readSkus, findSkuById } = require("../lib/skusStore");
 const { readDesigns, findDesignById } = require("../lib/designsStore");
@@ -66,10 +65,6 @@ router.get("/accent-colors", (req, res) => {
   res.json(accentColors);
 });
 
-router.get("/motifs", (req, res) => {
-  res.json(motifs);
-});
-
 // Current kiosk session context (store-only "login" state).
 router.get("/session", (req, res) => {
   if (!req.session.storeId) return res.json({ storeId: null, storeName: null });
@@ -108,7 +103,6 @@ router.post("/submit", async (req, res) => {
     skuId,
     designId,
     accentId,
-    motifId,
     previewPng,
     customerName,
     customerNumber,
@@ -125,12 +119,10 @@ router.post("/submit", async (req, res) => {
   const sku = skuRow ? publicSkuShape(skuRow) : null;
   const design = findDesignById(designId);
   const accent = accentColors.find((a) => a.id === accentId);
-  const motif = motifs.find((m) => m.id === motifId);
 
   if (!sku) return res.status(400).json({ error: "Invalid SKU" });
   if (!design) return res.status(400).json({ error: "Invalid design" });
   if (!accent) return res.status(400).json({ error: "Invalid accent colour" });
-  if (!motif) return res.status(400).json({ error: "Invalid motif" });
   if (!isValidInitials(initials)) {
     return res.status(400).json({ error: "Initials must be 1-3 letters" });
   }
@@ -177,7 +169,6 @@ router.post("/submit", async (req, res) => {
     heightMm: sku.heightMm,
     initials,
     accentName: accent.name,
-    motifName: motif.name,
     storeName: store.storeName,
     region: store.region,
     printProviderName: store.printProviderName,
@@ -233,8 +224,6 @@ router.post("/submit", async (req, res) => {
     initials,
     accentId: accent.id,
     accentName: accent.name,
-    motifId: motif.id,
-    motifName: motif.name,
     customerName: customer.name,
     customerNumber: customer.number,
     customerEmail: customer.email,

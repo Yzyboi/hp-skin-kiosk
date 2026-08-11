@@ -233,7 +233,6 @@ router.post("/api/designs", requireAdmin, (req, res) => {
     const record = addDesign({
       name: result.name,
       zone: result.zone,
-      motifZone: result.motifZone,
       svgBuffer: req.file.buffer
     });
     res.json(record);
@@ -253,7 +252,6 @@ router.put("/api/designs/:designId", requireAdmin, (req, res) => {
     const updated = updateDesign(req.params.designId, {
       name: result.name,
       zone: result.zone,
-      motifZone: result.motifZone,
       svgBuffer: req.file ? req.file.buffer : null
     });
     if (!updated) return res.status(404).json({ error: "Design not found" });
@@ -293,7 +291,6 @@ function orderToRow(o) {
     o.designName,
     o.initials,
     o.accentName,
-    o.motifName,
     o.customerName,
     o.customerNumber,
     o.customerEmail,

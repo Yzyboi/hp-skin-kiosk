@@ -242,17 +242,13 @@
     return `${z.xPct}, ${z.yPct}, ${z.widthPct}x${z.heightPct} (${z.align}${z.followsAccent ? ", accent" : ", " + z.fixedColor})`;
   }
 
-  function motifZoneSummary(mz) {
-    return `${mz.xPct}, ${mz.yPct}, ${mz.widthPct}x${mz.heightPct}`;
-  }
-
   async function loadDesigns() {
     if (!designsBody) return;
     try {
       const designs = await api("/admin/api/designs");
       designsBody.innerHTML = "";
       if (designs.length === 0) {
-        designsBody.innerHTML = '<tr><td colspan="7" class="muted">No designs yet.</td></tr>';
+        designsBody.innerHTML = '<tr><td colspan="6" class="muted">No designs yet.</td></tr>';
         return;
       }
       designs.forEach((d) => {
@@ -262,7 +258,6 @@
           <td>${escapeHtml(d.id)}</td>
           <td>${escapeHtml(d.name)}</td>
           <td>${escapeHtml(zoneSummary(d.zone))}</td>
-          <td>${escapeHtml(motifZoneSummary(d.motifZone))}</td>
           <td>${d.updatedAt ? new Date(d.updatedAt).toLocaleString() : ""}</td>
           <td>
             <button type="button" class="link-btn btn-edit-design" data-id="${escapeHtml(d.id)}">Edit</button>
@@ -273,7 +268,7 @@
         designsBody.appendChild(tr);
       });
     } catch (err) {
-      designsBody.innerHTML = `<tr><td colspan="7" class="error-text">${escapeHtml(err.message)}</td></tr>`;
+      designsBody.innerHTML = `<tr><td colspan="6" class="error-text">${escapeHtml(err.message)}</td></tr>`;
     }
   }
 
@@ -323,10 +318,6 @@
       document.getElementById("zoneAlign").value = d.zone.align;
       document.getElementById("zoneFollowsAccent").checked = d.zone.followsAccent;
       document.getElementById("zoneFixedColor").value = d.zone.fixedColor || "#0B4FD1";
-      document.getElementById("motifXPct").value = d.motifZone.xPct;
-      document.getElementById("motifYPct").value = d.motifZone.yPct;
-      document.getElementById("motifWidthPct").value = d.motifZone.widthPct;
-      document.getElementById("motifHeightPct").value = d.motifZone.heightPct;
       document.getElementById("designFormTitle").textContent = `Edit "${d.name}"`;
       document.getElementById("designSubmitBtn").textContent = "Update Design";
       document.getElementById("designCancelEditBtn").hidden = false;
@@ -357,10 +348,6 @@
       formData.append("zoneAlign", document.getElementById("zoneAlign").value);
       formData.append("zoneFollowsAccent", document.getElementById("zoneFollowsAccent").checked ? "true" : "false");
       formData.append("zoneFixedColor", document.getElementById("zoneFixedColor").value);
-      formData.append("motifXPct", document.getElementById("motifXPct").value);
-      formData.append("motifYPct", document.getElementById("motifYPct").value);
-      formData.append("motifWidthPct", document.getElementById("motifWidthPct").value);
-      formData.append("motifHeightPct", document.getElementById("motifHeightPct").value);
       const fileInput = document.getElementById("designFile");
       if (fileInput.files && fileInput.files.length > 0) {
         formData.append("file", fileInput.files[0]);

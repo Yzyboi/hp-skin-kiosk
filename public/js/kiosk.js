@@ -11,12 +11,10 @@
     allSkus: [],
     designs: [],
     accentColors: [],
-    motifs: [],
     sku: null,
     design: null,
     designImage: null,
     accentId: "blue",
-    motifId: "none",
     initials: "",
     customerName: "",
     customerNumber: "",
@@ -42,7 +40,6 @@
     customizeDesignName: document.getElementById("customizeDesignName"),
     initialsInput: document.getElementById("initialsInput"),
     accentSwatches: document.getElementById("accentSwatches"),
-    motifButtons: document.getElementById("motifButtons"),
     submitError: document.getElementById("submitError"),
     finalizeBtn: document.getElementById("finalizeBtn"),
     customerName: document.getElementById("customerName"),
@@ -57,7 +54,6 @@
     submitOrderBtn: document.getElementById("submitOrderBtn"),
     previewBox: document.getElementById("previewBox"),
     previewImg: document.getElementById("previewImg"),
-    previewMotifZone: document.getElementById("previewMotifZone"),
     previewZone: document.getElementById("previewZone"),
     previewInitials: document.getElementById("previewInitials"),
     previewCaption: document.getElementById("previewCaption"),
@@ -68,7 +64,6 @@
     sumSku: document.getElementById("sumSku"),
     sumInitials: document.getElementById("sumInitials"),
     sumAccent: document.getElementById("sumAccent"),
-    sumMotif: document.getElementById("sumMotif"),
     sumStore: document.getElementById("sumStore"),
     sumReferenceId: document.getElementById("sumReferenceId")
   };
@@ -154,7 +149,7 @@
       });
       state.storeId = result.storeId;
       state.storeName = result.storeName;
-      await Promise.all([loadSkus(), loadDesigns(), loadAccentColors(), loadMotifs()]);
+      await Promise.all([loadSkus(), loadDesigns(), loadAccentColors()]);
       showScreen("sku");
     } catch (err) {
       el.storeError.textContent = err.message;
@@ -172,7 +167,6 @@
     state.design = null;
     state.designImage = null;
     state.accentId = "blue";
-    state.motifId = "none";
     state.initials = "";
     state.customerName = "";
     state.customerNumber = "";
@@ -283,16 +277,8 @@
     state.accentColors = await api("/api/accent-colors");
   }
 
-  async function loadMotifs() {
-    state.motifs = await api("/api/motifs");
-  }
-
   function currentAccent() {
     return state.accentColors.find((a) => a.id === state.accentId) || state.accentColors[0];
-  }
-
-  function currentMotif() {
-    return state.motifs.find((m) => m.id === state.motifId) || state.motifs[0];
   }
 
   function renderAccentSwatches() {
@@ -313,33 +299,6 @@
     });
   }
 
-  const MOTIF_ICON_HTML = {
-    none: '<span class="motif-icon-none">&mdash;</span>',
-    stripe: '<div class="motif-icon-stripe"></div>',
-    dots: '<div class="motif-icon-dot"></div><div class="motif-icon-dot"></div><div class="motif-icon-dot"></div>',
-    circle: '<div class="motif-icon-circle"></div>',
-    slash: '<div class="motif-icon-slash"></div>'
-  };
-
-  function renderMotifButtons() {
-    el.motifButtons.innerHTML = "";
-    state.motifs.forEach((motif) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "motif-btn" + (motif.id === state.motifId ? " selected" : "");
-      btn.innerHTML = `
-        <div class="motif-icon-wrap">${MOTIF_ICON_HTML[motif.id] || ""}</div>
-        <span class="motif-label">${motif.name}</span>
-      `;
-      btn.addEventListener("click", () => {
-        state.motifId = motif.id;
-        renderMotifButtons();
-        drawLivePreview();
-      });
-      el.motifButtons.appendChild(btn);
-    });
-  }
-
   function loadImage(src) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -355,7 +314,6 @@
     el.initialsInput.value = state.initials || "";
     el.customizeDesignName.textContent = state.design.name;
     renderAccentSwatches();
-    renderMotifButtons();
     showScreen("customize");
     try {
       state.designImage = await loadImage(state.design.assetPath);
@@ -376,7 +334,6 @@
     if (!sku || !design) return;
 
     const accent = currentAccent();
-    const motif = currentMotif();
 
     el.previewBox.style.aspectRatio = `${sku.widthMm} / ${sku.heightMm}`;
     el.previewImg.src = design.assetPath;
@@ -388,29 +345,7 @@
     el.previewInitials.style.fontSize = fontSize;
     el.previewInitials.textContent = state.initials;
 
-    const mz = design.motifZone;
-    el.previewMotifZone.setAttribute(
-      "style",
-      `top:${mz.yPct}%;left:${mz.xPct}%;width:${mz.widthPct}%;height:${mz.heightPct}%;`
-    );
-    el.previewMotifZone.innerHTML = motifPreviewHtml(motif.id, accent.hex);
-
     el.previewCaption.textContent = `${sku.modelName} — ${sku.widthMm} mm × ${sku.heightMm} mm`;
-  }
-
-  function motifPreviewHtml(motifId, hex) {
-    switch (motifId) {
-      case "stripe":
-        return `<div style="width:60%;height:38%;background:${hex};transform:skewX(-20deg);"></div>`;
-      case "dots":
-        return `<div style="width:14%;height:14%;border-radius:50%;background:${hex};"></div>`.repeat(3);
-      case "circle":
-        return `<div style="width:55%;aspect-ratio:1/1;border-radius:50%;border:8% solid ${hex};"></div>`;
-      case "slash":
-        return `<div style="width:10%;height:85%;background:${hex};transform:rotate(20deg);"></div>`;
-      default:
-        return "";
-    }
   }
 
   function sanitizeInitials(raw) {
@@ -457,62 +392,10 @@
     ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
   }
 
-  function drawMotif(ctx, motifId, hex, x, y, w, h) {
-    ctx.save();
-    ctx.fillStyle = hex;
-    ctx.strokeStyle = hex;
-    const cx = x + w / 2;
-    const cy = y + h / 2;
-    switch (motifId) {
-      case "stripe": {
-        const sw = w * 0.6;
-        const sh = h * 0.38;
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.transform(1, 0, -Math.tan((20 * Math.PI) / 180), 1, 0, 0);
-        ctx.fillRect(-sw / 2, -sh / 2, sw, sh);
-        ctx.restore();
-        break;
-      }
-      case "dots": {
-        const r = Math.min(w, h) * 0.07;
-        const gap = r * 3;
-        [-gap, 0, gap].forEach((dx) => {
-          ctx.beginPath();
-          ctx.arc(cx + dx, cy, r, 0, Math.PI * 2);
-          ctx.fill();
-        });
-        break;
-      }
-      case "circle": {
-        const r = Math.min(w, h) * 0.275;
-        ctx.lineWidth = r * 0.3;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.stroke();
-        break;
-      }
-      case "slash": {
-        const sw = w * 0.1;
-        const sh = h * 0.85;
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate((20 * Math.PI) / 180);
-        ctx.fillRect(-sw / 2, -sh / 2, sw, sh);
-        ctx.restore();
-        break;
-      }
-      default:
-        break;
-    }
-    ctx.restore();
-  }
-
   function renderFinalCanvas() {
     const sku = state.sku;
     const design = state.design;
     const accent = currentAccent();
-    const motif = currentMotif();
 
     const canvas = document.createElement("canvas");
     const w = Math.round(sku.widthMm * PX_PER_MM);
@@ -531,9 +414,6 @@
     if (state.designImage) {
       drawImageCover(ctx, state.designImage, 0, 0, w, h);
     }
-
-    const mz = design.motifZone;
-    drawMotif(ctx, motif.id, accent.hex, (mz.xPct / 100) * w, (mz.yPct / 100) * h, (mz.widthPct / 100) * w, (mz.heightPct / 100) * h);
 
     const zone = design.zone;
     const zx = (zone.xPct / 100) * w;
@@ -654,7 +534,6 @@
           skuId: state.sku.id,
           designId: state.design.id,
           accentId: state.accentId,
-          motifId: state.motifId,
           initials: state.initials,
           previewPng,
           customerName: name,
@@ -686,13 +565,11 @@
 
   function showConfirmScreen(referenceId, success, statusMessage) {
     const accent = currentAccent();
-    const motif = currentMotif();
     el.referenceId.textContent = referenceId;
     el.sumDesign.textContent = state.design.name;
     el.sumSku.textContent = `${state.sku.modelName} (${state.sku.familyName}) — ${state.sku.widthMm} mm × ${state.sku.heightMm} mm`;
     el.sumInitials.textContent = state.initials;
     el.sumAccent.textContent = accent.name;
-    el.sumMotif.textContent = motif.name;
     el.sumStore.textContent = state.storeName || "—";
     el.sumReferenceId.textContent = referenceId;
     el.submitStatus.textContent = statusMessage;
@@ -710,7 +587,7 @@
       if (session.storeId) {
         state.storeId = session.storeId;
         state.storeName = session.storeName;
-        await Promise.all([loadSkus(), loadDesigns(), loadAccentColors(), loadMotifs()]);
+        await Promise.all([loadSkus(), loadDesigns(), loadAccentColors()]);
         showScreen("sku");
         return;
       }

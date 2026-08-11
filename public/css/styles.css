@@ -456,76 +456,6 @@ h1 {
 
 .swatch.white { border: 1px solid var(--ink-20); }
 
-.motif-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.motif-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  background: #fff;
-  border: 2px solid var(--ink-12);
-  border-radius: 10px;
-  padding: 10px 12px;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.motif-btn.selected { border-color: var(--brand-blue); }
-
-.motif-icon-wrap {
-  width: 32px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-}
-
-.motif-icon-stripe {
-  width: 22px;
-  height: 12px;
-  background: var(--brand-blue);
-  transform: skewX(-20deg);
-}
-
-.motif-icon-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--brand-blue);
-}
-
-.motif-icon-circle {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 3px solid var(--brand-blue);
-}
-
-.motif-icon-slash {
-  width: 3px;
-  height: 22px;
-  background: var(--brand-blue);
-  transform: rotate(20deg);
-}
-
-.motif-icon-none {
-  font-size: 16px;
-  color: var(--ink-40);
-}
-
-.motif-label {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--ink-60);
-}
-
 .preview-box {
   width: 100%;
   position: relative;
@@ -539,13 +469,6 @@ h1 {
 
 .preview-layer { position: absolute; }
 .preview-base { inset: 0; width: 100%; height: 100%; object-fit: cover; }
-
-.preview-motif-zone {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6%;
-}
 
 .preview-zone {
   display: flex;
