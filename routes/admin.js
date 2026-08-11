@@ -310,7 +310,6 @@ function orderToRow(o) {
     o.designId,
     o.designName,
     o.initials,
-    o.accentName,
     o.customerName,
     o.customerNumber,
     o.customerEmail,

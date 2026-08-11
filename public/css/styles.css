@@ -434,28 +434,6 @@ h1 {
 
 .initials-input:focus { border-color: var(--brand-blue); }
 
-.swatch-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.swatch {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid var(--ink-10);
-  cursor: pointer;
-  padding: 0;
-}
-
-.swatch.selected {
-  border: 3px solid var(--brand-blue);
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(11, 79, 209, 0.25);
-}
-
-.swatch.white { border: 1px solid var(--ink-20); }
-
 .preview-box {
   width: 100%;
   position: relative;

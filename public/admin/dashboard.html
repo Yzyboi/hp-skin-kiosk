@@ -139,7 +139,9 @@
         The SVG or PNG artwork is stored and served exactly as uploaded - it is never
         recolored, rescaled, or otherwise modified. Zone is a percentage rectangle (0-100)
         relative to the artwork's own bounding box, so it holds across every SKU's aspect
-        ratio - it's where the customer's initials render.
+        ratio - it's where the customer's initials render, in the colour and Google Font
+        locked in below (there's no customer-facing colour/font picker - both are fixed
+        per design).
       </p>
       <form id="designForm">
         <input type="hidden" id="designEditId" value="" />
@@ -151,7 +153,7 @@
         <input id="designFile" type="file" accept=".svg,image/svg+xml,.png,image/png" />
         <p id="designFileHint" class="muted" style="margin-top:4px;"></p>
 
-        <h4 style="margin-top:20px;">Zone (initials)</h4>
+        <h4 style="margin-top:20px;">Zone (customer's text)</h4>
         <div class="design-field-grid">
           <div><label class="field-label" for="zoneXPct">X %</label><input id="zoneXPct" type="number" min="0" max="100" step="0.1" required /></div>
           <div><label class="field-label" for="zoneYPct">Y %</label><input id="zoneYPct" type="number" min="0" max="100" step="0.1" required /></div>
@@ -166,14 +168,25 @@
             </select>
           </div>
           <div>
-            <label class="field-label" for="zoneFixedColor">Fixed colour</label>
-            <input id="zoneFixedColor" type="color" value="#0B4FD1" />
+            <label class="field-label" for="zoneColor">Colour</label>
+            <input id="zoneColor" type="color" value="#0B4FD1" required />
           </div>
         </div>
-        <label class="design-checkbox-row" for="zoneFollowsAccent">
-          <input id="zoneFollowsAccent" type="checkbox" checked />
-          <span>Initials follow the customer's chosen Accent Colour (uncheck to always use the fixed colour above)</span>
-        </label>
+        <label class="field-label" for="zoneFontFamily">Google Font family</label>
+        <input id="zoneFontFamily" type="text" placeholder="e.g. Poppins" required />
+        <p class="muted" style="margin-top:4px;">Must match a family name on <a href="https://fonts.google.com" target="_blank" rel="noopener">fonts.google.com</a> exactly (letters, digits, spaces, hyphens only).</p>
+
+        <div class="design-field-grid" style="margin-top:14px;">
+          <div>
+            <label class="field-label" for="zoneFieldLabel">Field label</label>
+            <input id="zoneFieldLabel" type="text" placeholder="e.g. initials or astronaut name" maxlength="40" required />
+          </div>
+          <div>
+            <label class="field-label" for="zoneMaxLength">Max length</label>
+            <input id="zoneMaxLength" type="number" min="0" step="1" placeholder="0 = no limit" />
+          </div>
+        </div>
+        <p class="muted" style="margin-top:4px;">Field label fills in the kiosk's "Add your ___." prompt, e.g. "initials" or "astronaut name". Max length caps how many characters a customer can type - leave blank or 0 for no limit.</p>
 
         <div class="upload-row" style="margin-top:20px;">
           <button type="submit" id="designSubmitBtn" class="btn btn-primary">Add Design</button>
@@ -193,6 +206,8 @@
               <th>ID</th>
               <th>Name</th>
               <th>Zone</th>
+              <th>Field</th>
+              <th>Font</th>
               <th>Last Updated</th>
               <th>Actions</th>
             </tr>

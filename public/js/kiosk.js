@@ -10,11 +10,9 @@
     allStores: [],
     allSkus: [],
     designs: [],
-    accentColors: [],
     sku: null,
     design: null,
     designImage: null,
-    accentId: "blue",
     initials: "",
     customerName: "",
     customerNumber: "",
@@ -38,8 +36,9 @@
     designGrid: document.getElementById("designGrid"),
     designContinueBtn: document.getElementById("designContinueBtn"),
     customizeDesignName: document.getElementById("customizeDesignName"),
+    customizeHeadline: document.getElementById("customizeHeadline"),
+    customizeHint: document.getElementById("customizeHint"),
     initialsInput: document.getElementById("initialsInput"),
-    accentSwatches: document.getElementById("accentSwatches"),
     submitError: document.getElementById("submitError"),
     finalizeBtn: document.getElementById("finalizeBtn"),
     customerName: document.getElementById("customerName"),
@@ -63,7 +62,7 @@
     sumDesign: document.getElementById("sumDesign"),
     sumSku: document.getElementById("sumSku"),
     sumInitials: document.getElementById("sumInitials"),
-    sumAccent: document.getElementById("sumAccent"),
+    sumInitialsLabel: document.getElementById("sumInitialsLabel"),
     sumStore: document.getElementById("sumStore"),
     sumReferenceId: document.getElementById("sumReferenceId")
   };
@@ -149,7 +148,7 @@
       });
       state.storeId = result.storeId;
       state.storeName = result.storeName;
-      await Promise.all([loadSkus(), loadDesigns(), loadAccentColors()]);
+      await Promise.all([loadSkus(), loadDesigns()]);
       showScreen("sku");
     } catch (err) {
       el.storeError.textContent = err.message;
@@ -166,7 +165,6 @@
     state.sku = null;
     state.design = null;
     state.designImage = null;
-    state.accentId = "blue";
     state.initials = "";
     state.customerName = "";
     state.customerNumber = "";
@@ -273,30 +271,39 @@
   el.designContinueBtn.addEventListener("click", () => enterCustomizeScreen());
 
   // ---------- Screen 4: Customize + live preview ----------
-  async function loadAccentColors() {
-    state.accentColors = await api("/api/accent-colors");
-  }
+  // Colour and font are fixed per design (no customer-facing picker) -
+  // each design's zone.color/zone.fontFamily are used directly. The font
+  // is a Google Font the admin locked in for that design, so it has to be
+  // fetched at runtime before it can be used for either the live CSS
+  // preview or the canvas rasterization below.
+  const loadedFontFamilies = new Set();
 
-  function currentAccent() {
-    return state.accentColors.find((a) => a.id === state.accentId) || state.accentColors[0];
-  }
-
-  function renderAccentSwatches() {
-    el.accentSwatches.innerHTML = "";
-    state.accentColors.forEach((accent) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "swatch" + (accent.id === state.accentId ? " selected" : "");
-      if (accent.hex.toLowerCase() === "#ffffff") btn.classList.add("white");
-      btn.style.background = accent.hex;
-      btn.setAttribute("aria-label", accent.name);
-      btn.addEventListener("click", () => {
-        state.accentId = accent.id;
-        renderAccentSwatches();
-        drawLivePreview();
-      });
-      el.accentSwatches.appendChild(btn);
+  function ensureGoogleFontStylesheet(fontFamily) {
+    if (loadedFontFamilies.has(fontFamily)) return Promise.resolve();
+    loadedFontFamilies.add(fontFamily);
+    return new Promise((resolve) => {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily).replace(/%20/g, "+")}:wght@700&display=swap`;
+      link.onload = () => resolve();
+      link.onerror = () => resolve(); // best-effort - falls back to sans-serif rather than blocking the kiosk
+      document.head.appendChild(link);
     });
+  }
+
+  // Registering the stylesheet isn't enough to guarantee the glyphs are
+  // actually downloaded - canvas text drawn before that finishes silently
+  // falls back to a default font. document.fonts.load() forces the fetch
+  // and resolves once it's ready to use.
+  async function loadDesignFont(design) {
+    const fontFamily = design && design.zone && design.zone.fontFamily;
+    if (!fontFamily) return;
+    await ensureGoogleFontStylesheet(fontFamily);
+    try {
+      await document.fonts.load(`700 48px "${fontFamily}"`);
+    } catch (err) {
+      // best-effort - proceed with whatever font the browser falls back to
+    }
   }
 
   function loadImage(src) {
@@ -309,17 +316,53 @@
     });
   }
 
+  // Each design's customization text can be anything from 1-3 letter
+  // initials to an unbounded full name, so the font size can't be a fixed
+  // lookup by length anymore - it has to shrink to fit whatever the
+  // customer typed inside the zone's actual pixel dimensions. Shared
+  // offscreen canvas used purely for text measurement (kept separate from
+  // any canvas actually being drawn to).
+  const measureCanvas = document.createElement("canvas");
+  const measureCtx = measureCanvas.getContext("2d");
+
+  function fitFontSize(text, maxWidth, maxSize, fontFamily, minSize) {
+    const floor = minSize || 8;
+    let size = Math.max(maxSize, floor);
+    const safeText = text && text.length > 0 ? text : "M";
+    measureCtx.font = `700 ${size}px "${fontFamily}", sans-serif`;
+    while (size > floor && measureCtx.measureText(safeText).width > maxWidth) {
+      size -= 1;
+      measureCtx.font = `700 ${size}px "${fontFamily}", sans-serif`;
+    }
+    return size;
+  }
+
   async function enterCustomizeScreen() {
     el.submitError.hidden = true;
     el.initialsInput.value = state.initials || "";
     el.customizeDesignName.textContent = state.design.name;
-    renderAccentSwatches();
+
+    const fieldLabel = state.design.zone.fieldLabel || "text";
+    const maxLength = state.design.zone.maxLength || 0;
+    el.customizeHeadline.textContent = `Add your ${fieldLabel}.`;
+    el.customizeHint.textContent =
+      maxLength > 0
+        ? `Up to ${maxLength} character${maxLength === 1 ? "" : "s"}, automatically capitalized.`
+        : "Automatically capitalized.";
+    el.initialsInput.placeholder = `Enter your ${fieldLabel}`;
+    if (maxLength > 0) {
+      el.initialsInput.setAttribute("maxlength", String(maxLength));
+    } else {
+      el.initialsInput.removeAttribute("maxlength");
+    }
+
     showScreen("customize");
     try {
       state.designImage = await loadImage(state.design.assetPath);
     } catch (err) {
       state.designImage = null;
     }
+    await loadDesignFont(state.design);
     drawLivePreview();
   }
 
@@ -333,27 +376,36 @@
     const design = state.design;
     if (!sku || !design) return;
 
-    const accent = currentAccent();
-
     el.previewBox.style.aspectRatio = `${sku.widthMm} / ${sku.heightMm}`;
     el.previewImg.src = design.assetPath;
 
     el.previewZone.setAttribute("style", zoneStyleString(design.zone));
-    const zoneColor = design.zone.followsAccent ? accent.hex : design.zone.fixedColor;
-    const fontSize = state.initials.length <= 1 ? "9cqw" : state.initials.length === 2 ? "7cqw" : "5.5cqw";
-    el.previewInitials.style.color = zoneColor;
-    el.previewInitials.style.fontSize = fontSize;
+    el.previewInitials.style.color = design.zone.color;
+    el.previewInitials.style.fontFamily = `"${design.zone.fontFamily}", sans-serif`;
     el.previewInitials.textContent = state.initials;
+
+    // Measured against the zone's actual rendered pixel size, not a fixed
+    // cqw value, so it works the same whether the text is "AK" or a full
+    // name. A slightly larger safety margin than the canvas export below
+    // to leave room for the preview's CSS letter-spacing, which canvas
+    // text measurement doesn't account for.
+    const zoneRect = el.previewZone.getBoundingClientRect();
+    if (zoneRect.width > 0 && zoneRect.height > 0) {
+      const fitSize = fitFontSize(state.initials, zoneRect.width * 0.88, zoneRect.height * 0.85, design.zone.fontFamily);
+      el.previewInitials.style.fontSize = `${fitSize}px`;
+    }
 
     el.previewCaption.textContent = `${sku.modelName} — ${sku.widthMm} mm × ${sku.heightMm} mm`;
   }
 
-  function sanitizeInitials(raw) {
-    return raw.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 3);
+  function sanitizeCustomizationText(raw, maxLength) {
+    const upper = raw.toUpperCase();
+    return maxLength > 0 ? upper.slice(0, maxLength) : upper;
   }
 
   el.initialsInput.addEventListener("input", () => {
-    const clean = sanitizeInitials(el.initialsInput.value);
+    const maxLength = (state.design && state.design.zone.maxLength) || 0;
+    const clean = sanitizeCustomizationText(el.initialsInput.value, maxLength);
     el.initialsInput.value = clean;
     state.initials = clean;
     el.finalizeBtn.disabled = !clean;
@@ -392,10 +444,10 @@
     ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
   }
 
-  function renderFinalCanvas() {
+  async function renderFinalCanvas() {
     const sku = state.sku;
     const design = state.design;
-    const accent = currentAccent();
+    await loadDesignFont(design);
 
     const canvas = document.createElement("canvas");
     const w = Math.round(sku.widthMm * PX_PER_MM);
@@ -420,11 +472,10 @@
     const zy = (zone.yPct / 100) * h;
     const zw = (zone.widthPct / 100) * w;
     const zh = (zone.heightPct / 100) * h;
-    const zoneColor = zone.followsAccent ? accent.hex : zone.fixedColor;
 
-    ctx.fillStyle = zoneColor;
-    const fontSize = Math.max(state.initials.length <= 1 ? zh * 0.85 : state.initials.length === 2 ? zh * 0.68 : zh * 0.52, 10);
-    ctx.font = `700 ${fontSize}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+    ctx.fillStyle = zone.color;
+    const fontSize = fitFontSize(state.initials, zw * 0.94, zh * 0.85, zone.fontFamily);
+    ctx.font = `700 ${fontSize}px "${zone.fontFamily}", sans-serif`;
     ctx.textBaseline = "middle";
     let textX = zx + zw / 2;
     ctx.textAlign = "center";
@@ -445,8 +496,8 @@
   el.finalizeBtn.addEventListener("click", () => {
     el.submitError.hidden = true;
 
-    if (!/^[A-Z]{1,3}$/.test(state.initials)) {
-      el.submitError.textContent = "Enter 1-3 letters for your initials.";
+    if (!state.initials || state.initials.trim().length < 1) {
+      el.submitError.textContent = `Enter your ${state.design.zone.fieldLabel || "text"}.`;
       el.submitError.hidden = false;
       return;
     }
@@ -527,13 +578,12 @@
     el.submitOrderBtn.textContent = "Submitting...";
 
     try {
-      const previewPng = renderFinalCanvas();
+      const previewPng = await renderFinalCanvas();
       const result = await api("/api/submit", {
         method: "POST",
         body: JSON.stringify({
           skuId: state.sku.id,
           designId: state.design.id,
-          accentId: state.accentId,
           initials: state.initials,
           previewPng,
           customerName: name,
@@ -563,13 +613,16 @@
     }
   });
 
+  function capitalizeFirst(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
   function showConfirmScreen(referenceId, success, statusMessage) {
-    const accent = currentAccent();
     el.referenceId.textContent = referenceId;
     el.sumDesign.textContent = state.design.name;
     el.sumSku.textContent = `${state.sku.modelName} (${state.sku.familyName}) — ${state.sku.widthMm} mm × ${state.sku.heightMm} mm`;
+    el.sumInitialsLabel.textContent = capitalizeFirst(state.design.zone.fieldLabel || "Text");
     el.sumInitials.textContent = state.initials;
-    el.sumAccent.textContent = accent.name;
     el.sumStore.textContent = state.storeName || "—";
     el.sumReferenceId.textContent = referenceId;
     el.submitStatus.textContent = statusMessage;
@@ -587,7 +640,7 @@
       if (session.storeId) {
         state.storeId = session.storeId;
         state.storeName = session.storeName;
-        await Promise.all([loadSkus(), loadDesigns(), loadAccentColors()]);
+        await Promise.all([loadSkus(), loadDesigns()]);
         showScreen("sku");
         return;
       }

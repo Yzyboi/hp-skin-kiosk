@@ -63,7 +63,7 @@
       <section class="screen" data-screen="design">
         <div class="screen-inner wide">
           <h1>Choose Your Design.</h1>
-          <p class="subtitle">Four skins, each with a built-in space for your initials.</p>
+          <p class="subtitle">Each skin has a built-in space to personalize.</p>
           <div id="designGrid" class="card-grid design-grid"></div>
           <div class="nav-row">
             <button class="btn btn-secondary" data-action="back-to-sku">Back</button>
@@ -77,8 +77,8 @@
         <div class="screen-inner wide">
           <div class="customize-layout">
             <div class="controls-pane">
-              <h1>Add your initials.</h1>
-              <p class="subtitle">1&ndash;3 letters. They'll appear live on your <span id="customizeDesignName"></span> skin.</p>
+              <h1 id="customizeHeadline">Add your initials.</h1>
+              <p class="subtitle">They'll appear live on your <span id="customizeDesignName"></span> skin.</p>
               <input
                 id="initialsInput"
                 class="initials-input"
@@ -86,13 +86,9 @@
                 inputmode="text"
                 autocomplete="off"
                 spellcheck="false"
-                maxlength="3"
                 placeholder="e.g. AK"
               />
-              <p class="hint">Letters only, automatically capitalized.</p>
-
-              <label class="field-label">Accent Colour</label>
-              <div id="accentSwatches" class="swatch-row"></div>
+              <p id="customizeHint" class="hint">Automatically capitalized.</p>
 
               <p id="submitError" class="error-text" hidden></p>
               <div class="nav-row">
@@ -162,8 +158,7 @@
             <div class="summary-grid">
               <span class="summary-key">Design</span><span id="sumDesign" class="summary-val"></span>
               <span class="summary-key">SKU family</span><span id="sumSku" class="summary-val"></span>
-              <span class="summary-key">Initials</span><span id="sumInitials" class="summary-val"></span>
-              <span class="summary-key">Accent Colour</span><span id="sumAccent" class="summary-val"></span>
+              <span id="sumInitialsLabel" class="summary-key">Initials</span><span id="sumInitials" class="summary-val"></span>
               <span class="summary-key">Store</span><span id="sumStore" class="summary-val"></span>
               <span class="summary-key">Reference ID</span><span id="sumReferenceId" class="summary-val"></span>
             </div>

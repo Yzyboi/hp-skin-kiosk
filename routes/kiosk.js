@@ -10,14 +10,13 @@
 const express = require("express");
 const crypto = require("crypto");
 
-const accentColors = require("../config/accentColors");
 const { readStores, findStoreById } = require("../lib/storesStore");
 const { readSkus, findSkuById } = require("../lib/skusStore");
 const { readDesigns, findDesignById } = require("../lib/designsStore");
 const { appendOrder } = require("../lib/ordersStore");
 const {
-  sanitizeInitials,
-  isValidInitials,
+  sanitizeCustomizationText,
+  isValidCustomizationText,
   sanitizePhone,
   validateCustomerInfo
 } = require("../lib/validators");
@@ -61,10 +60,6 @@ router.get("/designs", (req, res) => {
   res.json(readDesigns());
 });
 
-router.get("/accent-colors", (req, res) => {
-  res.json(accentColors);
-});
-
 // Current kiosk session context (store-only "login" state).
 router.get("/session", (req, res) => {
   if (!req.session.storeId) return res.json({ storeId: null, storeName: null });
@@ -102,7 +97,6 @@ router.post("/submit", async (req, res) => {
   const {
     skuId,
     designId,
-    accentId,
     previewPng,
     customerName,
     customerNumber,
@@ -113,18 +107,20 @@ router.post("/submit", async (req, res) => {
     customerPincode,
     consent
   } = req.body || {};
-  const initials = sanitizeInitials(req.body && req.body.initials);
 
   const skuRow = findSkuById(skuId);
   const sku = skuRow ? publicSkuShape(skuRow) : null;
   const design = findDesignById(designId);
-  const accent = accentColors.find((a) => a.id === accentId);
 
   if (!sku) return res.status(400).json({ error: "Invalid SKU" });
   if (!design) return res.status(400).json({ error: "Invalid design" });
-  if (!accent) return res.status(400).json({ error: "Invalid accent colour" });
-  if (!isValidInitials(initials)) {
-    return res.status(400).json({ error: "Initials must be 1-3 letters" });
+
+  const maxLength = design.zone.maxLength || 0;
+  const initials = sanitizeCustomizationText(req.body && req.body.initials, maxLength);
+  if (!isValidCustomizationText(initials, maxLength)) {
+    return res.status(400).json({
+      error: maxLength > 0 ? `Enter up to ${maxLength} characters` : "This field is required"
+    });
   }
   if (!previewPng || typeof previewPng !== "string" || !previewPng.startsWith("data:image/png;base64,")) {
     return res.status(400).json({ error: "Missing or invalid preview image" });
@@ -168,7 +164,6 @@ router.post("/submit", async (req, res) => {
     widthMm: sku.widthMm,
     heightMm: sku.heightMm,
     initials,
-    accentName: accent.name,
     storeName: store.storeName,
     region: store.region,
     printProviderName: store.printProviderName,
@@ -222,8 +217,6 @@ router.post("/submit", async (req, res) => {
     designId: design.id,
     designName: design.name,
     initials,
-    accentId: accent.id,
-    accentName: accent.name,
     customerName: customer.name,
     customerNumber: customer.number,
     customerEmail: customer.email,
