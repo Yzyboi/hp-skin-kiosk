@@ -56,6 +56,8 @@
     previewZone: document.getElementById("previewZone"),
     previewInitials: document.getElementById("previewInitials"),
     previewCaption: document.getElementById("previewCaption"),
+    confirmIcon: document.getElementById("confirmIcon"),
+    confirmHeadline: document.getElementById("confirmHeadline"),
     referenceId: document.getElementById("referenceId"),
     submitStatus: document.getElementById("submitStatus"),
     startOverBtn: document.getElementById("startOverBtn"),
@@ -635,6 +637,9 @@
   }
 
   function showConfirmScreen(referenceId, success, statusMessage) {
+    el.confirmIcon.textContent = success ? "✓" : "!";
+    el.confirmIcon.classList.toggle("error", !success);
+    el.confirmHeadline.textContent = success ? "You're all set." : "Order recorded.";
     el.referenceId.textContent = referenceId;
     el.sumDesign.textContent = state.design.name;
     el.sumSku.textContent = `${state.sku.modelName} (${state.sku.familyName}) — ${state.sku.widthMm} mm × ${state.sku.heightMm} mm`;

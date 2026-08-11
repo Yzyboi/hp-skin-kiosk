@@ -478,6 +478,10 @@ h1 {
   justify-content: center;
   font-size: 28px;
   font-weight: 700;
+}
+
+.confirm-check.error {
+  background: var(--error);
   margin-bottom: 24px;
 }
 

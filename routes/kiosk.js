@@ -199,7 +199,16 @@ router.post("/submit", async (req, res) => {
   } catch (err) {
     emailStatus = "failed";
     emailError = err.message;
-    console.error(`[submit] email send failed for ${referenceId}:`, err.message);
+    // Logged with code/command/responseCode (not just message) since a
+    // timeout waiting for the final SMTP response looks identical to a
+    // real delivery failure from err.message alone, but they need very
+    // different fixes - the extra fields distinguish them.
+    console.error(`[submit] email send failed for ${referenceId}:`, {
+      message: err.message,
+      code: err.code,
+      command: err.command,
+      responseCode: err.responseCode
+    });
   }
 
   appendOrder({
