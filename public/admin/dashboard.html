@@ -136,10 +136,10 @@
     <section class="admin-card">
       <h3 id="designFormTitle">Add a design</h3>
       <p class="muted">
-        The SVG artwork is stored and served exactly as uploaded - it is never recolored,
-        rescaled, or otherwise modified. Zone is a percentage rectangle (0-100) relative to
-        the artwork's own bounding box, so it holds across every SKU's aspect ratio - it's
-        where the customer's initials render.
+        The SVG or PNG artwork is stored and served exactly as uploaded - it is never
+        recolored, rescaled, or otherwise modified. Zone is a percentage rectangle (0-100)
+        relative to the artwork's own bounding box, so it holds across every SKU's aspect
+        ratio - it's where the customer's initials render.
       </p>
       <form id="designForm">
         <input type="hidden" id="designEditId" value="" />
@@ -147,8 +147,8 @@
         <label class="field-label" for="designName">Name</label>
         <input id="designName" type="text" required />
 
-        <label class="field-label" for="designFile">SVG artwork</label>
-        <input id="designFile" type="file" accept=".svg,image/svg+xml" />
+        <label class="field-label" for="designFile">SVG or PNG artwork</label>
+        <input id="designFile" type="file" accept=".svg,image/svg+xml,.png,image/png" />
         <p id="designFileHint" class="muted" style="margin-top:4px;"></p>
 
         <h4 style="margin-top:20px;">Zone (initials)</h4>

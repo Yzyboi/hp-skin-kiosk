@@ -40,24 +40,40 @@ const upload = multer({
   }
 });
 
-// Accepts the raw SVG artwork file for a design. No re-encoding happens
-// anywhere in this pipeline - the bytes multer buffers here are the exact
-// bytes designsStore writes to disk and serves back, so the artwork
-// customers see is byte-for-byte what the admin uploaded.
-const uploadSvg = multer({
+// Accepts the raw SVG or PNG artwork file for a design. No re-encoding
+// happens anywhere in this pipeline - the bytes multer buffers here are
+// the exact bytes designsStore writes to disk and serves back, so the
+// artwork customers see is byte-for-byte what the admin uploaded.
+const uploadDesignAsset = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const okExt = /\.svg$/i.test(file.originalname);
-    const okMime = file.mimetype === "image/svg+xml" || file.mimetype === "text/plain" || file.mimetype === "application/octet-stream";
+    const okExt = /\.(svg|png)$/i.test(file.originalname);
+    const okMime = [
+      "image/svg+xml",
+      "image/png",
+      "text/plain",
+      "application/octet-stream"
+    ].includes(file.mimetype);
     if (okExt && okMime) return cb(null, true);
-    cb(new Error("Only .svg files are accepted"));
+    cb(new Error("Only .svg or .png files are accepted"));
   }
 });
 
-function looksLikeSvg(buffer) {
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+// Detects the real format from file content (not just the extension/MIME
+// type the browser reported), so a mislabeled upload can't slip past the
+// filter above. Returns "svg", "png", or null if neither is recognized.
+function detectDesignAssetType(buffer) {
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    return "png";
+  }
   const head = buffer.toString("utf8", 0, Math.min(buffer.length, 1000)).trim();
-  return /<svg[\s>]/i.test(head);
+  if (/<svg[\s>]/i.test(head)) {
+    return "svg";
+  }
+  return null;
 }
 
 // Shared upload -> parse -> per-row validate -> merge -> summary flow,
@@ -211,20 +227,21 @@ router.delete("/api/skus/:skuId", requireAdmin, (req, res) => {
 // --- Designs --------------------------------------------------------------
 //
 // Unlike Stores/SKUs, designs aren't bulk-uploaded via Excel - each one
-// carries a binary SVG asset plus hand-tuned zone coordinates, so they're
-// created/edited one at a time through a dedicated form (see the Designs
-// section of the admin dashboard).
+// carries a binary SVG or PNG asset plus hand-tuned zone coordinates, so
+// they're created/edited one at a time through a dedicated form (see the
+// Designs section of the admin dashboard).
 
 router.get("/api/designs", requireAdmin, (req, res) => {
   res.json(readDesigns());
 });
 
 router.post("/api/designs", requireAdmin, (req, res) => {
-  uploadSvg.single("file")(req, res, (multerErr) => {
+  uploadDesignAsset.single("file")(req, res, (multerErr) => {
     if (multerErr) return res.status(400).json({ error: multerErr.message });
-    if (!req.file) return res.status(400).json({ error: "No SVG file uploaded" });
-    if (!looksLikeSvg(req.file.buffer)) {
-      return res.status(400).json({ error: "That file doesn't look like a valid SVG" });
+    if (!req.file) return res.status(400).json({ error: "No SVG or PNG file uploaded" });
+    const assetType = detectDesignAssetType(req.file.buffer);
+    if (!assetType) {
+      return res.status(400).json({ error: "That file doesn't look like a valid SVG or PNG" });
     }
 
     const result = validateDesignFields(req.body || {});
@@ -233,17 +250,19 @@ router.post("/api/designs", requireAdmin, (req, res) => {
     const record = addDesign({
       name: result.name,
       zone: result.zone,
-      svgBuffer: req.file.buffer
+      fileBuffer: req.file.buffer,
+      assetType
     });
     res.json(record);
   });
 });
 
 router.put("/api/designs/:designId", requireAdmin, (req, res) => {
-  uploadSvg.single("file")(req, res, (multerErr) => {
+  uploadDesignAsset.single("file")(req, res, (multerErr) => {
     if (multerErr) return res.status(400).json({ error: multerErr.message });
-    if (req.file && !looksLikeSvg(req.file.buffer)) {
-      return res.status(400).json({ error: "That file doesn't look like a valid SVG" });
+    const assetType = req.file ? detectDesignAssetType(req.file.buffer) : null;
+    if (req.file && !assetType) {
+      return res.status(400).json({ error: "That file doesn't look like a valid SVG or PNG" });
     }
 
     const result = validateDesignFields(req.body || {});
@@ -252,7 +271,8 @@ router.put("/api/designs/:designId", requireAdmin, (req, res) => {
     const updated = updateDesign(req.params.designId, {
       name: result.name,
       zone: result.zone,
-      svgBuffer: req.file ? req.file.buffer : null
+      fileBuffer: req.file ? req.file.buffer : null,
+      assetType
     });
     if (!updated) return res.status(404).json({ error: "Design not found" });
     res.json(updated);
