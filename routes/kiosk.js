@@ -31,9 +31,16 @@ function generateReferenceId() {
   return "HP-SKIN-" + crypto.randomBytes(3).toString("hex").toUpperCase();
 }
 
+// Customer-facing SKU picker only shows Model Name + Family (Series /
+// Category) - the rest of the admin-managed spec sheet (form factor,
+// hinges, logo, weight, verification source) stays server-side. Width/
+// height/cornerRadiusMm are still included because the client needs them
+// to render the live preview and rasterize the final image, even though
+// they're never displayed as a customer-facing spec.
 function publicSkuShape(s) {
   return {
     id: s.skuId,
+    modelName: s.modelName,
     familyName: s.familyName,
     widthMm: s.widthMm,
     heightMm: s.heightMm,
@@ -164,6 +171,7 @@ router.post("/submit", async (req, res) => {
   const specSheet = {
     designId: design.id,
     designName: design.name,
+    skuModelName: sku.modelName,
     skuFamily: sku.familyName,
     widthMm: sku.widthMm,
     heightMm: sku.heightMm,
@@ -216,6 +224,7 @@ router.post("/submit", async (req, res) => {
     region: store.region,
     printProviderName: store.printProviderName,
     skuId: sku.id,
+    skuModelName: sku.modelName,
     skuFamily: sku.familyName,
     widthMm: sku.widthMm,
     heightMm: sku.heightMm,

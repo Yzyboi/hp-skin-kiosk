@@ -174,25 +174,37 @@
       const skus = await api("/admin/api/skus");
       skusBody.innerHTML = "";
       if (skus.length === 0) {
-        skusBody.innerHTML = '<tr><td colspan="7" class="muted">No SKUs yet.</td></tr>';
+        skusBody.innerHTML = '<tr><td colspan="13" class="muted">No SKUs yet.</td></tr>';
         return;
       }
       skus.forEach((s) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${escapeHtml(s.skuId)}</td>
-          <td>${escapeHtml(s.familyName)}</td>
+          <td>${escapeHtml(s.modelName || "")}</td>
+          <td>${escapeHtml(s.familyName || "")}</td>
+          <td>${escapeHtml(s.formFactor || "")}</td>
           <td>${escapeHtml(s.widthMm)}</td>
           <td>${escapeHtml(s.heightMm)}</td>
-          <td>${s.cornerRadiusMm !== undefined && s.cornerRadiusMm !== null ? escapeHtml(s.cornerRadiusMm) : ""}</td>
+          <td>${s.thicknessMm !== undefined && s.thicknessMm !== null ? escapeHtml(s.thicknessMm) : ""}</td>
+          <td>${yesNoLabel(s.hingesAtBack)}</td>
+          <td>${yesNoLabel(s.premiumLogoAtBack)}</td>
+          <td>${s.weightKg !== undefined && s.weightKg !== null ? escapeHtml(s.weightKg) : ""}</td>
+          <td>${escapeHtml(s.verificationSource || "")}</td>
           <td>${s.updatedAt ? new Date(s.updatedAt).toLocaleString() : ""}</td>
           <td><button type="button" class="btn-delete" data-id="${escapeHtml(s.skuId)}">Delete</button></td>
         `;
         skusBody.appendChild(tr);
       });
     } catch (err) {
-      skusBody.innerHTML = `<tr><td colspan="7" class="error-text">${escapeHtml(err.message)}</td></tr>`;
+      skusBody.innerHTML = `<tr><td colspan="13" class="error-text">${escapeHtml(err.message)}</td></tr>`;
     }
+  }
+
+  function yesNoLabel(v) {
+    if (v === true) return "Yes";
+    if (v === false) return "No";
+    return "";
   }
 
   if (skusBody) {

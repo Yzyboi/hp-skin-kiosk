@@ -227,6 +227,26 @@ h1 {
 
 .store-option.selected { border-color: var(--brand-blue); }
 
+.sku-option {
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  border: 2px solid var(--ink-10);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sku-option.selected { border-color: var(--brand-blue); }
+
+.sku-option-name { font-size: 15px; font-weight: 700; }
+.sku-option-family { font-size: 13px; color: var(--ink-50); }
+
 .store-empty {
   font-size: 14px;
   color: var(--ink-40);

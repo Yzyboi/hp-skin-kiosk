@@ -40,8 +40,12 @@ const upload = multer({
 });
 
 // Shared upload -> parse -> per-row validate -> merge -> summary flow,
-// used by both the store and SKU upload endpoints below.
-function handleMergeUpload({ sheetName, validateRow, mergeRows }) {
+// used by both the store and SKU upload endpoints below. idField names
+// the property validateRow's returned row uses as its unique key (e.g.
+// "storeId"/"skuId") - rows within the same file that resolve to an
+// already-seen ID (e.g. two Model Names that slugify the same way) are
+// skipped rather than silently overwriting an earlier row in the batch.
+function handleMergeUpload({ sheetName, idField, validateRow, mergeRows }) {
   return (req, res) => {
     upload.single("file")(req, res, async (multerErr) => {
       if (multerErr) {
@@ -60,15 +64,22 @@ function handleMergeUpload({ sheetName, validateRow, mergeRows }) {
 
       const validRows = [];
       const skipped = [];
+      const seenIds = new Set();
 
       rawRows.forEach((raw, i) => {
         const excelRowNumber = i + 2; // header is row 1
         const result = validateRow(raw);
-        if (result.ok) {
-          validRows.push(result.row);
-        } else {
+        if (!result.ok) {
           skipped.push({ row: excelRowNumber, reason: result.reason });
+          return;
         }
+        const id = result.row[idField];
+        if (seenIds.has(id)) {
+          skipped.push({ row: excelRowNumber, reason: `Duplicate ${idField} "${id}" earlier in this file` });
+          return;
+        }
+        seenIds.add(id);
+        validRows.push(result.row);
       });
 
       const { added, updated } = mergeRows(validRows);
@@ -138,7 +149,7 @@ router.get("/api/stores/template", requireAdmin, async (req, res) => {
 router.post(
   "/api/stores/upload",
   requireAdmin,
-  handleMergeUpload({ sheetName: "Stores", validateRow: validateStoreRow, mergeRows: mergeStoreRows })
+  handleMergeUpload({ sheetName: "Stores", idField: "storeId", validateRow: validateStoreRow, mergeRows: mergeStoreRows })
 );
 
 router.delete("/api/stores/:storeId", requireAdmin, (req, res) => {
@@ -167,7 +178,7 @@ router.get("/api/skus/template", requireAdmin, async (req, res) => {
 router.post(
   "/api/skus/upload",
   requireAdmin,
-  handleMergeUpload({ sheetName: "SKUs", validateRow: validateSkuRow, mergeRows: mergeSkuRows })
+  handleMergeUpload({ sheetName: "SKUs", idField: "skuId", validateRow: validateSkuRow, mergeRows: mergeSkuRows })
 );
 
 router.delete("/api/skus/:skuId", requireAdmin, (req, res) => {
@@ -194,6 +205,7 @@ function orderToRow(o) {
     o.region || "",
     o.printProviderName,
     o.skuId,
+    o.skuModelName,
     o.skuFamily,
     o.widthMm,
     o.heightMm,

@@ -105,11 +105,22 @@ valid).
 
 | Column | Required | Notes |
 |---|---|---|
-| SKU ID | Yes | Unique key used for merge matching |
-| Family Name | Yes | Shown to customers on the "Choose your laptop" screen |
-| Width (mm) | Yes | Must be a positive number; drives the live-preview aspect ratio |
-| Height (mm) | Yes | Must be a positive number |
-| Corner Radius (mm) | No | Must be a non-negative number if present |
+| SKU Model Name | Yes | Shown to customers on the "Choose your laptop" screen; also slugified into the SKU ID used for merge matching (no separate ID column - re-uploading the same Model Name updates the existing row) |
+| Series / Category | Yes | Shown to customers alongside the Model Name |
+| Form Factor | No | Backend reference only (e.g. `15.6" Clamshell`) |
+| Width (cm) | Yes | Must be a positive number; converted to mm and drives the live-preview print width |
+| Depth (cm) | Yes | Must be a positive number; converted to mm and drives the live-preview print height |
+| Height (cm) | No | Closed-laptop thickness; stored as `thicknessMm` for reference only, not used for print sizing |
+| Hinges at Back | No | `YES`/`NO`; backend reference only, no effect on rendering yet |
+| Premium Logo at Back | No | `YES`/`NO`; backend reference only, no effect on rendering yet |
+| Weight (kg) | No | Backend reference only |
+| Verification Source | No | Backend reference only |
+
+Customers only ever see **Model Name** and **Series / Category** on the
+kiosk's SKU picker (which has the same search+list UI as the store
+picker) - every other column is admin/backend-only data, visible in the
+dashboard's Current SKU data table but not exposed by the public
+`/api/skus` endpoint.
 
 ### Merge logic (both)
 
@@ -174,7 +185,8 @@ conversion) for print-accurate color instead of the generic default.
 
 - SKUs are no longer static config - manage them from the admin
   dashboard's SKUs section (see "Excel upload / merge behavior" above).
-  The seed data in `data/skus.json` is only used to populate the dataset
+  The seed data in `data/skus.json` ships with the real HP India laptop
+  catalog (59 verified models) and is only used to populate the dataset
   the very first time the app runs against an empty `DATA_DIR`.
 - Designs: drop the asset (SVG preferred, high-res PNG accepted) into
   `public/designs/`, then add an entry to `config/designs.js`:

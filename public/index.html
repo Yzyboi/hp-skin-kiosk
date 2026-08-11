@@ -46,10 +46,12 @@
 
       <!-- Screen 2: SKU picker -->
       <section class="screen" data-screen="sku">
-        <div class="screen-inner">
+        <div class="screen-inner narrow">
           <h1>Choose your laptop.</h1>
           <p class="subtitle">Pick the model you're personalizing.</p>
-          <div id="skuGrid" class="card-grid"></div>
+          <label class="field-label" for="skuSearchInput">Model</label>
+          <input id="skuSearchInput" class="text-input" type="text" placeholder="Search for your laptop&hellip;" autocomplete="off" />
+          <div id="skuList" class="store-list"></div>
           <div class="nav-row">
             <button class="btn btn-secondary" data-action="back-to-store">Back</button>
             <button id="skuContinueBtn" class="btn btn-primary" disabled>Continue</button>

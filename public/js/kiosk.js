@@ -8,7 +8,7 @@
     storeId: null,
     storeName: null,
     allStores: [],
-    skus: [],
+    allSkus: [],
     designs: [],
     accentColors: [],
     motifs: [],
@@ -34,7 +34,8 @@
     storeList: document.getElementById("storeList"),
     storeError: document.getElementById("storeError"),
     storeContinueBtn: document.getElementById("storeContinueBtn"),
-    skuGrid: document.getElementById("skuGrid"),
+    skuSearchInput: document.getElementById("skuSearchInput"),
+    skuList: document.getElementById("skuList"),
     skuContinueBtn: document.getElementById("skuContinueBtn"),
     designGrid: document.getElementById("designGrid"),
     designContinueBtn: document.getElementById("designContinueBtn"),
@@ -183,8 +184,9 @@
     el.initialsInput.value = "";
     el.storeSearchInput.value = "";
     el.storeContinueBtn.disabled = true;
-    document.querySelectorAll(".pick-card").forEach((c) => c.classList.remove("selected"));
+    el.skuSearchInput.value = "";
     el.skuContinueBtn.disabled = true;
+    document.querySelectorAll(".pick-card").forEach((c) => c.classList.remove("selected"));
     el.designContinueBtn.disabled = true;
     [el.customerName, el.customerNumber, el.customerEmail, el.customerAddress, el.customerCity, el.customerState, el.customerPincode].forEach(
       (input) => (input.value = "")
@@ -197,27 +199,44 @@
   }
 
   // ---------- Screen 2: SKU ----------
-  async function loadSkus() {
-    state.skus = await api("/api/skus");
-    el.skuGrid.innerHTML = "";
-    state.skus.forEach((sku) => {
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "pick-card";
-      card.innerHTML = `
-        <div class="pick-card-thumb" style="aspect-ratio:${sku.widthMm}/${sku.heightMm}"></div>
-        <span class="pick-card-title">${sku.familyName}</span>
-        <span class="pick-card-sub">${sku.widthMm} mm &times; ${sku.heightMm} mm</span>
+  // Customers only ever see Model Name + Family here - the rest of the
+  // spec sheet (form factor, hinges, logo, weight, source) is admin-only.
+  function renderSkuList(filterText) {
+    const q = String(filterText || "").trim().toLowerCase();
+    const filtered = q
+      ? state.allSkus.filter(
+          (s) => s.modelName.toLowerCase().includes(q) || s.familyName.toLowerCase().includes(q)
+        )
+      : state.allSkus;
+
+    el.skuList.innerHTML = "";
+    if (filtered.length === 0) {
+      el.skuList.innerHTML = '<p class="store-empty">No laptops match your search.</p>';
+      return;
+    }
+    filtered.forEach((sku) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "sku-option" + (state.sku && state.sku.id === sku.id ? " selected" : "");
+      btn.innerHTML = `
+        <span class="sku-option-name">${sku.modelName}</span>
+        <span class="sku-option-family">${sku.familyName}</span>
       `;
-      card.addEventListener("click", () => {
+      btn.addEventListener("click", () => {
         state.sku = sku;
-        document.querySelectorAll("#skuGrid .pick-card").forEach((c) => c.classList.remove("selected"));
-        card.classList.add("selected");
+        renderSkuList(el.skuSearchInput.value);
         el.skuContinueBtn.disabled = false;
       });
-      el.skuGrid.appendChild(card);
+      el.skuList.appendChild(btn);
     });
   }
+
+  async function loadSkus() {
+    state.allSkus = await api("/api/skus");
+    renderSkuList(el.skuSearchInput.value);
+  }
+
+  el.skuSearchInput.addEventListener("input", () => renderSkuList(el.skuSearchInput.value));
 
   document.querySelector('[data-action="back-to-store"]').addEventListener("click", () => showScreen("store"));
   el.skuContinueBtn.addEventListener("click", () => {
@@ -376,7 +395,7 @@
     );
     el.previewMotifZone.innerHTML = motifPreviewHtml(motif.id, accent.hex);
 
-    el.previewCaption.textContent = `${sku.familyName} — ${sku.widthMm} mm × ${sku.heightMm} mm`;
+    el.previewCaption.textContent = `${sku.modelName} — ${sku.widthMm} mm × ${sku.heightMm} mm`;
   }
 
   function motifPreviewHtml(motifId, hex) {
@@ -670,7 +689,7 @@
     const motif = currentMotif();
     el.referenceId.textContent = referenceId;
     el.sumDesign.textContent = state.design.name;
-    el.sumSku.textContent = `${state.sku.familyName} (${state.sku.widthMm} mm × ${state.sku.heightMm} mm)`;
+    el.sumSku.textContent = `${state.sku.modelName} (${state.sku.familyName}) — ${state.sku.widthMm} mm × ${state.sku.heightMm} mm`;
     el.sumInitials.textContent = state.initials;
     el.sumAccent.textContent = accent.name;
     el.sumMotif.textContent = motif.name;

@@ -79,9 +79,12 @@
     <section class="admin-card">
       <h3>Upload SKU data</h3>
       <p class="muted">
-        Rows are merged by <b>SKU ID</b>: existing IDs are updated, new IDs are added, and SKUs
-        not present in the file are left untouched. Malformed rows are skipped individually.
-        These are the models shown on the kiosk's "Choose your laptop" screen.
+        The SKU ID is generated automatically from the Model Name (no ID column needed).
+        Rows are merged by that ID: re-uploading a file with the same Model Name updates the
+        existing row instead of duplicating it; new Model Names are added; SKUs not present in
+        the file are left untouched. Malformed rows are skipped individually. Customers only ever
+        see the Model Name and Series / Category on the kiosk's "Choose your laptop" screen -
+        everything else here is backend reference data.
       </p>
       <form id="skuUploadForm" class="upload-row">
         <input id="skuFileInput" type="file" accept=".xlsx" required />
@@ -110,10 +113,16 @@
           <thead>
             <tr>
               <th>SKU ID</th>
-              <th>Family Name</th>
+              <th>Model Name</th>
+              <th>Series / Category</th>
+              <th>Form Factor</th>
               <th>Width (mm)</th>
               <th>Height (mm)</th>
-              <th>Corner Radius (mm)</th>
+              <th>Thickness (mm)</th>
+              <th>Hinges at Back</th>
+              <th>Premium Logo at Back</th>
+              <th>Weight (kg)</th>
+              <th>Verification Source</th>
               <th>Last Updated</th>
               <th>Actions</th>
             </tr>
