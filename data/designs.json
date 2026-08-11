@@ -1,0 +1,86 @@
+[
+  {
+    "id": "shear",
+    "name": "Shear",
+    "assetPath": "/design-assets/shear.svg",
+    "zone": {
+      "xPct": 55,
+      "yPct": 68,
+      "widthPct": 38,
+      "heightPct": 22,
+      "align": "center",
+      "followsAccent": true,
+      "fixedColor": "#0B4FD1"
+    },
+    "motifZone": {
+      "xPct": 8,
+      "yPct": 8,
+      "widthPct": 30,
+      "heightPct": 20
+    },
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "halo",
+    "name": "Halo",
+    "assetPath": "/design-assets/halo.svg",
+    "zone": {
+      "xPct": 25,
+      "yPct": 38,
+      "widthPct": 50,
+      "heightPct": 24,
+      "align": "center",
+      "followsAccent": true,
+      "fixedColor": "#0B4FD1"
+    },
+    "motifZone": {
+      "xPct": 6,
+      "yPct": 76,
+      "widthPct": 30,
+      "heightPct": 18
+    },
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "grid",
+    "name": "Grid",
+    "assetPath": "/design-assets/grid.svg",
+    "zone": {
+      "xPct": 6,
+      "yPct": 8,
+      "widthPct": 36,
+      "heightPct": 20,
+      "align": "left",
+      "followsAccent": true,
+      "fixedColor": "#0B4FD1"
+    },
+    "motifZone": {
+      "xPct": 58,
+      "yPct": 70,
+      "widthPct": 36,
+      "heightPct": 20
+    },
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "fold",
+    "name": "Fold",
+    "assetPath": "/design-assets/fold.svg",
+    "zone": {
+      "xPct": 6,
+      "yPct": 62,
+      "widthPct": 34,
+      "heightPct": 22,
+      "align": "left",
+      "followsAccent": false,
+      "fixedColor": "#FFFFFF"
+    },
+    "motifZone": {
+      "xPct": 58,
+      "yPct": 8,
+      "widthPct": 34,
+      "heightPct": 20
+    },
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  }
+]

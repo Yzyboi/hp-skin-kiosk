@@ -11,6 +11,7 @@ const { requireAdmin } = require("../middleware/auth");
 const { readStores, mergeStoreRows, deleteStore } = require("../lib/storesStore");
 const { readSkus, mergeSkuRows, deleteSku } = require("../lib/skusStore");
 const { readOrders, findOrdersInRange } = require("../lib/ordersStore");
+const { readDesigns, addDesign, updateDesign, deleteDesign } = require("../lib/designsStore");
 const {
   STORE_HEADERS,
   STORE_EXAMPLE_ROW,
@@ -21,7 +22,7 @@ const {
   buildDataWorkbook,
   parseWorkbook
 } = require("../lib/excelTemplate");
-const { validateStoreRow, validateSkuRow } = require("../lib/validators");
+const { validateStoreRow, validateSkuRow, validateDesignFields } = require("../lib/validators");
 
 const router = express.Router();
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -38,6 +39,26 @@ const upload = multer({
     cb(new Error("Only .xlsx files are accepted"));
   }
 });
+
+// Accepts the raw SVG artwork file for a design. No re-encoding happens
+// anywhere in this pipeline - the bytes multer buffers here are the exact
+// bytes designsStore writes to disk and serves back, so the artwork
+// customers see is byte-for-byte what the admin uploaded.
+const uploadSvg = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const okExt = /\.svg$/i.test(file.originalname);
+    const okMime = file.mimetype === "image/svg+xml" || file.mimetype === "text/plain" || file.mimetype === "application/octet-stream";
+    if (okExt && okMime) return cb(null, true);
+    cb(new Error("Only .svg files are accepted"));
+  }
+});
+
+function looksLikeSvg(buffer) {
+  const head = buffer.toString("utf8", 0, Math.min(buffer.length, 1000)).trim();
+  return /<svg[\s>]/i.test(head);
+}
 
 // Shared upload -> parse -> per-row validate -> merge -> summary flow,
 // used by both the store and SKU upload endpoints below. idField names
@@ -184,6 +205,65 @@ router.post(
 router.delete("/api/skus/:skuId", requireAdmin, (req, res) => {
   const deleted = deleteSku(req.params.skuId);
   if (!deleted) return res.status(404).json({ error: "SKU not found" });
+  res.json({ ok: true });
+});
+
+// --- Designs --------------------------------------------------------------
+//
+// Unlike Stores/SKUs, designs aren't bulk-uploaded via Excel - each one
+// carries a binary SVG asset plus hand-tuned zone coordinates, so they're
+// created/edited one at a time through a dedicated form (see the Designs
+// section of the admin dashboard).
+
+router.get("/api/designs", requireAdmin, (req, res) => {
+  res.json(readDesigns());
+});
+
+router.post("/api/designs", requireAdmin, (req, res) => {
+  uploadSvg.single("file")(req, res, (multerErr) => {
+    if (multerErr) return res.status(400).json({ error: multerErr.message });
+    if (!req.file) return res.status(400).json({ error: "No SVG file uploaded" });
+    if (!looksLikeSvg(req.file.buffer)) {
+      return res.status(400).json({ error: "That file doesn't look like a valid SVG" });
+    }
+
+    const result = validateDesignFields(req.body || {});
+    if (!result.ok) return res.status(400).json({ error: result.reason });
+
+    const record = addDesign({
+      name: result.name,
+      zone: result.zone,
+      motifZone: result.motifZone,
+      svgBuffer: req.file.buffer
+    });
+    res.json(record);
+  });
+});
+
+router.put("/api/designs/:designId", requireAdmin, (req, res) => {
+  uploadSvg.single("file")(req, res, (multerErr) => {
+    if (multerErr) return res.status(400).json({ error: multerErr.message });
+    if (req.file && !looksLikeSvg(req.file.buffer)) {
+      return res.status(400).json({ error: "That file doesn't look like a valid SVG" });
+    }
+
+    const result = validateDesignFields(req.body || {});
+    if (!result.ok) return res.status(400).json({ error: result.reason });
+
+    const updated = updateDesign(req.params.designId, {
+      name: result.name,
+      zone: result.zone,
+      motifZone: result.motifZone,
+      svgBuffer: req.file ? req.file.buffer : null
+    });
+    if (!updated) return res.status(404).json({ error: "Design not found" });
+    res.json(updated);
+  });
+});
+
+router.delete("/api/designs/:designId", requireAdmin, (req, res) => {
+  const deleted = deleteDesign(req.params.designId);
+  if (!deleted) return res.status(404).json({ error: "Design not found" });
   res.json({ ok: true });
 });
 

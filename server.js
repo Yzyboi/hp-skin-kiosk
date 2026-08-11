@@ -7,6 +7,7 @@ const session = require("express-session");
 const kioskRoutes = require("./routes/kiosk");
 const adminRoutes = require("./routes/admin");
 const { requireAdmin } = require("./middleware/auth");
+const { ASSETS_DIR: DESIGN_ASSETS_DIR } = require("./lib/designsStore");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +37,9 @@ app.use(
 // --- Customer-facing kiosk ---
 app.use("/api", kioskRoutes);
 app.use(express.static(path.join(__dirname, "public"), { index: false, redirect: false }));
+// Admin-uploaded design artwork lives under DATA_DIR (not public/) so it
+// survives redeploys on a host with a persistent disk - see designsStore.js.
+app.use("/design-assets", express.static(DESIGN_ASSETS_DIR, { index: false, redirect: false }));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });

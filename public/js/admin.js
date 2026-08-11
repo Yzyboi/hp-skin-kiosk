@@ -234,6 +234,153 @@
     onDone: loadSkus
   });
 
+  // ---------- Designs ----------
+  const designsBody = document.getElementById("designsBody");
+  const designForm = document.getElementById("designForm");
+
+  function zoneSummary(z) {
+    return `${z.xPct}, ${z.yPct}, ${z.widthPct}x${z.heightPct} (${z.align}${z.followsAccent ? ", accent" : ", " + z.fixedColor})`;
+  }
+
+  function motifZoneSummary(mz) {
+    return `${mz.xPct}, ${mz.yPct}, ${mz.widthPct}x${mz.heightPct}`;
+  }
+
+  async function loadDesigns() {
+    if (!designsBody) return;
+    try {
+      const designs = await api("/admin/api/designs");
+      designsBody.innerHTML = "";
+      if (designs.length === 0) {
+        designsBody.innerHTML = '<tr><td colspan="7" class="muted">No designs yet.</td></tr>';
+        return;
+      }
+      designs.forEach((d) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><img class="design-thumb" src="${escapeHtml(d.assetPath)}" alt="${escapeHtml(d.name)}" /></td>
+          <td>${escapeHtml(d.id)}</td>
+          <td>${escapeHtml(d.name)}</td>
+          <td>${escapeHtml(zoneSummary(d.zone))}</td>
+          <td>${escapeHtml(motifZoneSummary(d.motifZone))}</td>
+          <td>${d.updatedAt ? new Date(d.updatedAt).toLocaleString() : ""}</td>
+          <td>
+            <button type="button" class="link-btn btn-edit-design" data-id="${escapeHtml(d.id)}">Edit</button>
+            &nbsp;
+            <button type="button" class="btn-delete" data-id="${escapeHtml(d.id)}">Delete</button>
+          </td>
+        `;
+        designsBody.appendChild(tr);
+      });
+    } catch (err) {
+      designsBody.innerHTML = `<tr><td colspan="7" class="error-text">${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function resetDesignForm() {
+    designForm.reset();
+    document.getElementById("designEditId").value = "";
+    document.getElementById("zoneFixedColor").value = "#0B4FD1";
+    document.getElementById("designFormTitle").textContent = "Add a design";
+    document.getElementById("designSubmitBtn").textContent = "Add Design";
+    document.getElementById("designCancelEditBtn").hidden = true;
+    document.getElementById("designFile").required = true;
+    document.getElementById("designFileHint").textContent = "";
+  }
+
+  if (designsBody) {
+    designsBody.addEventListener("click", (e) => {
+      const editBtn = e.target.closest(".btn-edit-design");
+      if (editBtn) {
+        loadDesignIntoForm(editBtn.dataset.id);
+        return;
+      }
+      const delBtn = e.target.closest(".btn-delete");
+      if (delBtn) {
+        const designId = delBtn.dataset.id;
+        deleteRecord(
+          `/admin/api/designs/${encodeURIComponent(designId)}`,
+          `Delete design "${designId}"? This cannot be undone.`,
+          loadDesigns
+        );
+      }
+    });
+  }
+
+  async function loadDesignIntoForm(designId) {
+    try {
+      const designs = await api("/admin/api/designs");
+      const d = designs.find((x) => x.id === designId);
+      if (!d) return;
+      document.getElementById("designEditId").value = d.id;
+      document.getElementById("designName").value = d.name;
+      document.getElementById("designFile").required = false;
+      document.getElementById("designFileHint").textContent = "Leave blank to keep the current artwork.";
+      document.getElementById("zoneXPct").value = d.zone.xPct;
+      document.getElementById("zoneYPct").value = d.zone.yPct;
+      document.getElementById("zoneWidthPct").value = d.zone.widthPct;
+      document.getElementById("zoneHeightPct").value = d.zone.heightPct;
+      document.getElementById("zoneAlign").value = d.zone.align;
+      document.getElementById("zoneFollowsAccent").checked = d.zone.followsAccent;
+      document.getElementById("zoneFixedColor").value = d.zone.fixedColor || "#0B4FD1";
+      document.getElementById("motifXPct").value = d.motifZone.xPct;
+      document.getElementById("motifYPct").value = d.motifZone.yPct;
+      document.getElementById("motifWidthPct").value = d.motifZone.widthPct;
+      document.getElementById("motifHeightPct").value = d.motifZone.heightPct;
+      document.getElementById("designFormTitle").textContent = `Edit "${d.name}"`;
+      document.getElementById("designSubmitBtn").textContent = "Update Design";
+      document.getElementById("designCancelEditBtn").hidden = false;
+      designForm.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      window.alert("Could not load design: " + err.message);
+    }
+  }
+
+  const designCancelEditBtn = document.getElementById("designCancelEditBtn");
+  if (designCancelEditBtn) {
+    designCancelEditBtn.addEventListener("click", resetDesignForm);
+  }
+
+  if (designForm) {
+    designForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById("designFormError");
+      errorEl.hidden = true;
+
+      const editId = document.getElementById("designEditId").value;
+      const formData = new FormData();
+      formData.append("name", document.getElementById("designName").value);
+      formData.append("zoneXPct", document.getElementById("zoneXPct").value);
+      formData.append("zoneYPct", document.getElementById("zoneYPct").value);
+      formData.append("zoneWidthPct", document.getElementById("zoneWidthPct").value);
+      formData.append("zoneHeightPct", document.getElementById("zoneHeightPct").value);
+      formData.append("zoneAlign", document.getElementById("zoneAlign").value);
+      formData.append("zoneFollowsAccent", document.getElementById("zoneFollowsAccent").checked ? "true" : "false");
+      formData.append("zoneFixedColor", document.getElementById("zoneFixedColor").value);
+      formData.append("motifXPct", document.getElementById("motifXPct").value);
+      formData.append("motifYPct", document.getElementById("motifYPct").value);
+      formData.append("motifWidthPct", document.getElementById("motifWidthPct").value);
+      formData.append("motifHeightPct", document.getElementById("motifHeightPct").value);
+      const fileInput = document.getElementById("designFile");
+      if (fileInput.files && fileInput.files.length > 0) {
+        formData.append("file", fileInput.files[0]);
+      }
+
+      try {
+        if (editId) {
+          await api(`/admin/api/designs/${encodeURIComponent(editId)}`, { method: "PUT", body: formData });
+        } else {
+          await api("/admin/api/designs", { method: "POST", body: formData });
+        }
+        resetDesignForm();
+        await loadDesigns();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.hidden = false;
+      }
+    });
+  }
+
   // ---------- Orders ----------
   const ordersBody = document.getElementById("ordersBody");
   async function loadOrders() {
@@ -294,5 +441,6 @@
 
   loadStores();
   loadSkus();
+  loadDesigns();
   loadOrders();
 })();

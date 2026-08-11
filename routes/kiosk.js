@@ -10,11 +10,11 @@
 const express = require("express");
 const crypto = require("crypto");
 
-const designs = require("../config/designs");
 const accentColors = require("../config/accentColors");
 const motifs = require("../config/motifs");
 const { readStores, findStoreById } = require("../lib/storesStore");
 const { readSkus, findSkuById } = require("../lib/skusStore");
+const { readDesigns, findDesignById } = require("../lib/designsStore");
 const { appendOrder } = require("../lib/ordersStore");
 const {
   sanitizeInitials,
@@ -59,7 +59,7 @@ router.get("/skus", (req, res) => {
 });
 
 router.get("/designs", (req, res) => {
-  res.json(designs);
+  res.json(readDesigns());
 });
 
 router.get("/accent-colors", (req, res) => {
@@ -123,7 +123,7 @@ router.post("/submit", async (req, res) => {
 
   const skuRow = findSkuById(skuId);
   const sku = skuRow ? publicSkuShape(skuRow) : null;
-  const design = designs.find((d) => d.id === designId);
+  const design = findDesignById(designId);
   const accent = accentColors.find((a) => a.id === accentId);
   const motif = motifs.find((m) => m.id === motifId);
 
