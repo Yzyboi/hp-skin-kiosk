@@ -1,7 +1,6 @@
 (function () {
   "use strict";
 
-  const PX_PER_MM = 5; // canvas render resolution for the exported PNG
   const SCREEN_ORDER = ["store", "sku", "design", "customize", "customer-info", "confirm"];
 
   const state = {
@@ -12,7 +11,6 @@
     designs: [],
     sku: null,
     design: null,
-    designImage: null,
     initials: "",
     customerName: "",
     customerNumber: "",
@@ -166,7 +164,6 @@
     state.storeName = null;
     state.sku = null;
     state.design = null;
-    state.designImage = null;
     state.initials = "";
     state.customerName = "";
     state.customerNumber = "";
@@ -308,16 +305,6 @@
     }
   }
 
-  function loadImage(src) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = src;
-    });
-  }
-
   // Each design's customization text can be anything from 1-3 letter
   // initials to an unbounded full name, so the font size can't be a fixed
   // lookup by length anymore - it has to shrink to fit whatever the
@@ -366,11 +353,6 @@
     }
 
     showScreen("customize");
-    try {
-      state.designImage = await loadImage(state.design.assetPath);
-    } catch (err) {
-      state.designImage = null;
-    }
     await loadDesignFont(state.design);
     drawLivePreview();
   }
@@ -422,94 +404,6 @@
   });
 
   document.querySelector('[data-action="back-to-design"]').addEventListener("click", () => showScreen("design"));
-
-  // ---------- Canvas rasterization (for the emailed PNG) ----------
-  function roundRectPath(ctx, x, y, w, h, r) {
-    const radius = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.arcTo(x + w, y, x + w, y + h, radius);
-    ctx.arcTo(x + w, y + h, x, y + h, radius);
-    ctx.arcTo(x, y + h, x, y, radius);
-    ctx.arcTo(x, y, x + w, y, radius);
-    ctx.closePath();
-  }
-
-  function drawImageCover(ctx, img, x, y, w, h) {
-    const imgRatio = img.width / img.height;
-    const boxRatio = w / h;
-    let sw, sh, sx, sy;
-    if (imgRatio > boxRatio) {
-      sh = img.height;
-      sw = sh * boxRatio;
-      sx = (img.width - sw) / 2;
-      sy = 0;
-    } else {
-      sw = img.width;
-      sh = sw / boxRatio;
-      sx = 0;
-      sy = (img.height - sh) / 2;
-    }
-    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-  }
-
-  async function renderFinalCanvas() {
-    const sku = state.sku;
-    const design = state.design;
-    await loadDesignFont(design);
-
-    const canvas = document.createElement("canvas");
-    const w = Math.round(sku.widthMm * PX_PER_MM);
-    const h = Math.round(sku.heightMm * PX_PER_MM);
-    canvas.width = w;
-    canvas.height = h;
-
-    const ctx = canvas.getContext("2d");
-    ctx.save();
-    roundRectPath(ctx, 0, 0, w, h, 10);
-    ctx.clip();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, w, h);
-
-    if (state.designImage) {
-      drawImageCover(ctx, state.designImage, 0, 0, w, h);
-    }
-
-    const zone = design.zone;
-    const zx = (zone.xPct / 100) * w;
-    const zy = (zone.yPct / 100) * h;
-    const zw = (zone.widthPct / 100) * w;
-    const zh = (zone.heightPct / 100) * h;
-
-    // Clipped to the zone rectangle itself (not just the canvas's rounded
-    // corners above) so the exported print file can never show text
-    // bleeding into the rest of the artwork, matching the live preview's
-    // overflow:hidden zone box.
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(zx, zy, zw, zh);
-    ctx.clip();
-
-    ctx.fillStyle = zone.color;
-    const fontSize = fitFontSize(state.initials, zw * 0.94, zh * 0.85, zone.fontFamily);
-    ctx.font = `700 ${fontSize}px "${zone.fontFamily}", sans-serif`;
-    ctx.textBaseline = "middle";
-    let textX = zx + zw / 2;
-    ctx.textAlign = "center";
-    if (zone.align === "left") {
-      textX = zx;
-      ctx.textAlign = "left";
-    } else if (zone.align === "right") {
-      textX = zx + zw;
-      ctx.textAlign = "right";
-    }
-    ctx.fillText(state.initials, textX, zy + zh / 2);
-    ctx.restore();
-
-    ctx.restore();
-    return canvas.toDataURL("image/png");
-  }
 
   // ---------- Finalize (design is locked in, move to customer info) ----------
   el.finalizeBtn.addEventListener("click", () => {
@@ -597,14 +491,12 @@
     el.submitOrderBtn.textContent = "Submitting...";
 
     try {
-      const previewPng = await renderFinalCanvas();
       const result = await api("/api/submit", {
         method: "POST",
         body: JSON.stringify({
           skuId: state.sku.id,
           designId: state.design.id,
           initials: state.initials,
-          previewPng,
           customerName: name,
           customerNumber: number,
           customerEmail: email,

@@ -19,7 +19,7 @@ if (!process.env.SESSION_SECRET) {
   process.exit(1);
 }
 
-app.use(express.json({ limit: "10mb" })); // preview PNG data URLs can be a few MB
+app.use(express.json({ limit: "1mb" })); // all JSON bodies are plain text fields now that the preview PNG is composited server-side
 app.use(
   session({
     secret: process.env.SESSION_SECRET,

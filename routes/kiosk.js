@@ -22,6 +22,7 @@ const {
 } = require("../lib/validators");
 const { sendSpecSheetEmail } = require("../lib/emailProvider");
 const { buildCmykPdf } = require("../lib/printAsset");
+const { compositeDesignPng } = require("../lib/designComposite");
 
 const router = express.Router();
 
@@ -97,7 +98,6 @@ router.post("/submit", async (req, res) => {
   const {
     skuId,
     designId,
-    previewPng,
     customerName,
     customerNumber,
     customerEmail,
@@ -122,9 +122,6 @@ router.post("/submit", async (req, res) => {
       error: maxLength > 0 ? `Enter up to ${maxLength} characters` : "This field is required"
     });
   }
-  if (!previewPng || typeof previewPng !== "string" || !previewPng.startsWith("data:image/png;base64,")) {
-    return res.status(400).json({ error: "Missing or invalid preview image" });
-  }
 
   const customerCheck = validateCustomerInfo({
     name: customerName,
@@ -142,7 +139,20 @@ router.post("/submit", async (req, res) => {
     return res.status(400).json({ error: "Consent to HP's privacy statement is required" });
   }
 
-  const previewPngBuffer = Buffer.from(previewPng.split(",")[1], "base64");
+  // The final print asset is composited here from the original design
+  // artwork - the browser used to rasterize this itself and upload the
+  // result, which silently downsampled every design to a fixed low
+  // density regardless of the source art's actual resolution. Unlike the
+  // CMYK conversion below, this isn't best-effort: without it there's no
+  // image to send at all, so a failure here fails the whole submission.
+  let previewPngBuffer;
+  try {
+    previewPngBuffer = await compositeDesignPng({ design, sku, initials });
+  } catch (err) {
+    console.error(`[submit] design compositing failed for design ${design.id}:`, err);
+    return res.status(500).json({ error: "We couldn't generate your design. Please try again or ask a store associate for help." });
+  }
+
   const referenceId = generateReferenceId();
   const timestamp = new Date().toISOString();
 
