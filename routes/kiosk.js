@@ -9,10 +9,12 @@
 
 const express = require("express");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 
 const { readStores, findStoreById } = require("../lib/storesStore");
 const { readSkus, findSkuById } = require("../lib/skusStore");
-const { readDesigns, findDesignById } = require("../lib/designsStore");
+const { readDesigns, findDesignById, ASSETS_DIR } = require("../lib/designsStore");
 const { appendOrder, findOrderByReferenceId } = require("../lib/ordersStore");
 const {
   sanitizeCustomizationText,
@@ -21,6 +23,7 @@ const {
   validateCustomerInfo
 } = require("../lib/validators");
 const { deliverOrder } = require("../lib/orderDelivery");
+const { getAssetAspect } = require("../lib/designComposite");
 
 const router = express.Router();
 
@@ -55,8 +58,27 @@ router.get("/skus", (req, res) => {
   res.json(readSkus().map(publicSkuShape));
 });
 
-router.get("/designs", (req, res) => {
-  res.json(readDesigns());
+// Each design's zone is authored against its own artwork's frame, not
+// against whatever a given SKU's aspect ratio crops it down to (see
+// lib/designComposite.js's computeCoverCropWindow) - the client needs
+// the artwork's intrinsic aspect ratio to reproduce that same crop math
+// for the live preview, so it's computed and attached here rather than
+// making the client guess it from the loaded <img>.
+router.get("/designs", async (req, res) => {
+  const designs = readDesigns();
+  const enriched = await Promise.all(
+    designs.map(async (d) => {
+      try {
+        const assetFile = path.join(ASSETS_DIR, path.basename(d.assetPath));
+        const assetAspect = await getAssetAspect(fs.readFileSync(assetFile));
+        return { ...d, assetAspect };
+      } catch (err) {
+        console.error(`[designs] could not read asset aspect ratio for design ${d.id}:`, err.message);
+        return d;
+      }
+    })
+  );
+  res.json(enriched);
 });
 
 // Current kiosk session context (store-only "login" state).

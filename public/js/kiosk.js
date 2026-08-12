@@ -242,18 +242,55 @@
     renderDesignGrid();
   }
 
+  // A design's zone (xPct/yPct/widthPct/heightPct) is authored against
+  // the ORIGINAL artwork's own frame, not against whatever a given SKU's
+  // aspect ratio crops it down to - every SKU has a different physical
+  // aspect ratio, so the same design's visible crop differs per SKU even
+  // though the zone's raw numbers never change. This mirrors
+  // lib/designComposite.js's computeCoverCropWindow/mapZoneToVisibleSpace
+  // (kept in sync by hand - the browser can't require() that Node
+  // module) so the live preview matches what actually gets composited
+  // server-side for the same design + SKU pair.
+  function computeCoverCropWindow(assetAspect, targetAspect) {
+    if (assetAspect >= targetAspect) {
+      const visibleWidthPct = (targetAspect / assetAspect) * 100;
+      return { offsetXPct: (100 - visibleWidthPct) / 2, offsetYPct: 0, visibleWidthPct, visibleHeightPct: 100 };
+    }
+    const visibleHeightPct = (assetAspect / targetAspect) * 100;
+    return { offsetXPct: 0, offsetYPct: (100 - visibleHeightPct) / 2, visibleWidthPct: 100, visibleHeightPct };
+  }
+
+  function mapZoneToVisibleSpace(zone, cropWindow) {
+    const { offsetXPct, offsetYPct, visibleWidthPct, visibleHeightPct } = cropWindow;
+    const xPct = Math.min(Math.max(((zone.xPct - offsetXPct) / visibleWidthPct) * 100, 0), 100);
+    const yPct = Math.min(Math.max(((zone.yPct - offsetYPct) / visibleHeightPct) * 100, 0), 100);
+    const widthPct = Math.min(Math.max((zone.widthPct / visibleWidthPct) * 100, 0), 100 - xPct);
+    const heightPct = Math.min(Math.max((zone.heightPct / visibleHeightPct) * 100, 0), 100 - yPct);
+    return { ...zone, xPct, yPct, widthPct, heightPct };
+  }
+
+  // design.assetAspect comes from the server (GET /api/designs) - falls
+  // back to the zone's own authored numbers, unadjusted, if it's ever
+  // missing (matches the pre-fix behavior rather than guessing).
+  function visibleZoneFor(design, sku) {
+    if (!design.assetAspect || !sku) return design.zone;
+    const cropWindow = computeCoverCropWindow(design.assetAspect, sku.widthMm / sku.heightMm);
+    return mapZoneToVisibleSpace(design.zone, cropWindow);
+  }
+
   function renderDesignGrid() {
     el.designGrid.innerHTML = "";
     const selectedId = state.design ? state.design.id : null;
     state.designs.forEach((design) => {
       const sku = state.sku || { widthMm: 4, heightMm: 3 };
+      const zone = visibleZoneFor(design, sku);
       const card = document.createElement("button");
       card.type = "button";
       card.className = "pick-card" + (design.id === selectedId ? " selected" : "");
       card.innerHTML = `
         <div class="pick-card-thumb" style="aspect-ratio:${sku.widthMm}/${sku.heightMm}">
           <img src="${design.assetPath}" alt="${design.name}" />
-          <div class="zone-outline" style="top:${design.zone.yPct}%;left:${design.zone.xPct}%;width:${design.zone.widthPct}%;height:${design.zone.heightPct}%;"></div>
+          <div class="zone-outline" style="top:${zone.yPct}%;left:${zone.xPct}%;width:${zone.widthPct}%;height:${zone.heightPct}%;"></div>
         </div>
         <span class="pick-card-title">${design.name}</span>
       `;
@@ -371,7 +408,7 @@
     el.previewBox.style.aspectRatio = `${sku.widthMm} / ${sku.heightMm}`;
     el.previewImg.src = design.assetPath;
 
-    el.previewZone.setAttribute("style", zoneStyleString(design.zone));
+    el.previewZone.setAttribute("style", zoneStyleString(visibleZoneFor(design, sku)));
     el.previewInitials.style.color = design.zone.color;
     el.previewInitials.style.fontFamily = `"${design.zone.fontFamily}", sans-serif`;
     el.previewInitials.textContent = state.initials;
