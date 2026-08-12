@@ -141,7 +141,7 @@ input::placeholder { color: rgba(0, 0, 0, 0.35); }
 
 .screen-inner { max-width: 720px; }
 .screen-inner.narrow { max-width: 520px; margin: auto 0; }
-.screen-inner.wide { max-width: 1000px; }
+.screen-inner.wide { max-width: 1100px; }
 
 .store-inner { position: relative; z-index: 1; max-width: 520px; }
 
@@ -414,7 +414,7 @@ h1 {
 }
 
 .controls-pane { flex: 1 1 320px; max-width: 420px; }
-.preview-pane { flex: 1 1 320px; max-width: 480px; }
+.preview-pane { flex: 1 1 360px; max-width: 560px; }
 
 .initials-input {
   width: 100%;
