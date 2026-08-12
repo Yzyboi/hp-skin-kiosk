@@ -21,7 +21,9 @@ reference ID.
 ## Stack
 
 - Node.js + Express, plain HTML/CSS/JS front end (no build step)
-- Nodemailer over Gmail SMTP for order emails to print providers
+- Resend (HTTP email API) for order emails to print providers - not
+  SMTP, since Render blocks outbound SMTP ports on all plans (see "Email
+  delivery" below)
 - sharp + pdfkit to convert the customer-facing RGB preview into a
   print-ready CMYK PDF for the print provider (see "Print-ready CMYK
   PDF" below)
@@ -52,24 +54,42 @@ See `.env.example` for the full list. Required:
 | `SESSION_SECRET` | Signs the Express session cookie. Generate with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`. Never hard-code or leave as a default. |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH` | Single shared admin login. See "Admin password" below. |
 | `DATA_DIR` | Directory holding `stores.json`, `skus.json`, `designs.json`, `design-assets/`, and `orders.json`. See "Hosting / DATA_DIR" below. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_APP_PASSWORD`, `EMAIL_FROM`, `EMAIL_REPLY_TO` | Gmail SMTP. See "Gmail App Password" below. |
+| `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO` | Resend (email API). See "Resend setup" below. |
 
-## Gmail App Password
+## Email delivery
 
-Gmail SMTP requires an App Password, not the account's normal login
-password (Google disables plain-password SMTP by default).
+Order emails to print providers go out via [Resend](https://resend.com),
+an HTTP email API, not SMTP. This app originally used Nodemailer over
+Gmail SMTP, but **Render blocks outbound SMTP ports (25/465/587) on every
+plan** to prevent spam abuse - every send failed with a connection
+timeout (`ETIMEDOUT` on the `CONN` step, before even reaching
+authentication) regardless of how correct the Gmail credentials were.
+Resend sends over HTTPS (443), which isn't affected.
 
-1. Use (or create) a Gmail account dedicated to this kiosk.
-2. Turn on 2-Step Verification on that account: myaccount.google.com/security.
-3. Go to myaccount.google.com/apppasswords, create an app password (name it
-   e.g. "HP Skin Kiosk"), and copy the 16-character password.
-4. Set:
-   - `SMTP_USER` = the Gmail address
-   - `SMTP_APP_PASSWORD` = the 16-character app password (no spaces)
-   - `EMAIL_FROM` = usually the same address, e.g. `"HP Skin Studio Kiosk" <that-address@gmail.com>`
+All sending goes through `lib/emailProvider.js`'s single
+`sendSpecSheetEmail()` export - see that file's top comment for the path
+to swap in a different HTTP-based provider (SendGrid, Mailgun, Postmark,
+SES's HTTP API) later if needed.
 
-Gmail's free-tier sending limit is ~500 messages/day, which is expected to
-be sufficient for a single-kiosk pilot.
+### Resend setup
+
+1. Create a Resend account at resend.com and go to **API Keys** to
+   generate one - set it as `RESEND_API_KEY`.
+2. Under **Domains**, add and verify the domain you want to send from
+   (a few DNS records at your domain registrar - Resend walks you through
+   it). Verification can take a few minutes to a few hours depending on
+   DNS propagation.
+3. Set `EMAIL_FROM` to an address on that verified domain, e.g.
+   `"HP Skin Studio Kiosk" <orders@your-domain.com>`. Resend rejects
+   sends from an address on a domain it hasn't verified you own - a plain
+   Gmail/Outlook/etc. address will not work here.
+4. For quick testing before a domain is verified, Resend provides a
+   sandbox sender (`onboarding@resend.dev`) that can only send to the
+   email address on the Resend account itself - fine for confirming the
+   integration works, not for real orders to a print provider.
+
+Resend's free tier (100 emails/day, 3,000/month at time of writing) is
+expected to be sufficient for a single-kiosk pilot.
 
 ## Generating the admin password hash
 
@@ -210,15 +230,19 @@ admin-managed.
 ## Orders
 
 Every finalized order (after the customer fills in the Customer Info
-screen) is appended to `data/orders.json` regardless of whether the
-print-provider email succeeded or failed, and includes an `emailStatus`
-field (`sent` / `failed`) so a failed send is still visible for
-follow-up. The admin dashboard's Orders section shows a live table of
-every order, and "Export orders" downloads an `.xlsx` for a given date
-range (inclusive, matched against the order's timestamp) with every
-field - reference ID, store/SKU/design/customization text, the
-customer's name/phone/email/address/city/state/pincode, and whether they
-checked the HP privacy-statement consent box (required to submit).
+screen) is appended to `data/orders.json` as soon as it's validated,
+before the print-provider email is even attempted - see "Order
+confirmation and email delivery" below. It includes an `emailStatus`
+field (`pending` / `retrying` / `sent` / `failed`) so delivery progress
+and any failure stay visible for follow-up rather than being lost. The
+admin dashboard's Orders section shows a live table of every order (with
+the retry attempt count and, on hover, the underlying error - see
+`public/js/admin.js`'s `formatEmailStatus`), and "Export orders"
+downloads an `.xlsx` for a given date range (inclusive, matched against
+the order's timestamp) with every field - reference ID, store/SKU/design/
+customization text, the customer's name/phone/email/address/city/state/
+pincode, and whether they checked the HP privacy-statement consent box
+(required to submit).
 
 ## Print-ready CMYK PDF
 
@@ -256,16 +280,6 @@ conversion) for print-accurate color instead of the generic default.
   dashboard's Designs section (see "Designs" above). The artwork itself
   is a fixed, static image - only the customer's customization text picks
   up the colour and Google Font locked in for that design (see "Designs").
-
-## Swapping Gmail SMTP for Amazon SES
-
-All email sending goes through `lib/emailProvider.js`'s single
-`sendSpecSheetEmail()` export - no other file talks to Nodemailer/Gmail
-directly. The swap path is documented in a comment at the top of that
-file: install `@aws-sdk/client-sesv2`, point Nodemailer at SES's
-transport (or write a small adapter with the same function signature),
-and update `config/email.js` to read AWS credentials/region instead of
-SMTP host/port/app-password. No caller changes.
 
 ## Hosting
 
@@ -308,14 +322,33 @@ this env var whenever the app is redeployed to a new host or plan.
 No custom domain is needed for the pilot; the platform's default
 subdomain (`*.onrender.com` etc.) is fine.
 
+## Order confirmation and email delivery
+
+`POST /api/submit` validates the order, persists it, and responds to the
+customer immediately (`emailStatus: "pending"`) - it does not wait on
+compositing the print asset, building the CMYK PDF, or emailing the print
+provider. Those happen afterward in the background
+(`lib/orderDelivery.js`), and the kiosk polls `GET
+/api/orders/last-status` (scoped to that browser session's own last
+order) to update the confirmation screen once delivery actually resolves.
+
+Email delivery specifically retries on failure rather than giving up
+after one attempt: 3 fast attempts happen right away (0s / +5s / +30s,
+covering the window a customer might still be at the kiosk), and
+`lib/orderRetrySweep.js` retries anything still unresolved on a 5-minute
+cadence, rebuilding the whole delivery from the persisted order record
+(nothing from the original request needs to survive). All of this shares
+a total 8-attempt budget (`MAX_TOTAL_ATTEMPTS` in `orderDelivery.js`) -
+only once that's exhausted does an order become permanently `"failed"`,
+which is when it needs manual follow-up (see the admin Orders view).
+
 ## Error handling
 
-- **Email send:** `POST /api/submit` awaits the send and returns an
-  explicit error (HTTP 502, with a customer-facing message and the
-  already-generated reference ID) on failure - never a silent success.
-  The order is still persisted either way (with `emailStatus: "failed"`
-  and the error message) so it isn't lost, and failures are logged
-  server-side.
+- **Email send:** never a silent failure - every attempt (immediate or
+  retried) is logged server-side, and the order's `emailStatus`/
+  `emailError`/`emailAttempts` fields (visible in the admin Orders view)
+  reflect the real state at all times, from `pending` through `retrying`
+  to a final `sent` or `failed`.
 - **Excel upload** (Stores and SKUs): a file that fails to parse at all
   (corrupt/wrong format) returns an error immediately with nothing
   merged. A file that parses but has bad individual rows still merges
