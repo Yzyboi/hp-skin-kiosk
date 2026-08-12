@@ -382,6 +382,17 @@
 
   // ---------- Orders ----------
   const ordersBody = document.getElementById("ordersBody");
+
+  // "retrying"/"failed" show the attempt count so it's obvious at a
+  // glance whether delivery is still working through it or stuck; hover
+  // the cell for the underlying SMTP error (see title attribute above).
+  function formatEmailStatus(o) {
+    const status = o.emailStatus || "";
+    if ((status === "retrying" || status === "failed") && o.emailAttempts) {
+      return `${status} (attempt ${o.emailAttempts})`;
+    }
+    return status;
+  }
   async function loadOrders() {
     if (!ordersBody) return;
     try {
@@ -408,7 +419,7 @@
           <td>${escapeHtml(o.customerState || "")}</td>
           <td>${escapeHtml(o.customerPincode || "")}</td>
           <td>${o.consentGiven ? "Yes" : "No"}</td>
-          <td>${escapeHtml(o.emailStatus || "")}</td>
+          <td title="${escapeHtml(o.emailError || "")}">${escapeHtml(formatEmailStatus(o))}</td>
         `;
         ordersBody.appendChild(tr);
       });
