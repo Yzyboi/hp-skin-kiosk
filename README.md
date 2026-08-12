@@ -247,9 +247,10 @@ pincode, and whether they checked the HP privacy-statement consent box
 ## Print-ready CMYK PDF
 
 Browsers/`<canvas>`/PNG are RGB-only, so the customer-facing live preview
-and its exported PNG are always RGB. `POST /api/submit` converts that PNG
-server-side into a CMYK PDF before the order email is sent, via
-`lib/printAsset.js`:
+is always RGB. The composited RGB PNG (`lib/designComposite.js`) is
+converted server-side into a CMYK PDF, via `lib/printAsset.js`, as part
+of background order delivery (see "Order confirmation and email
+delivery" above):
 
 1. `sharp` converts the RGB PNG to a CMYK JPEG (the standard way to get a
    correctly Adobe-tagged CMYK JPEG out of libvips).
@@ -257,11 +258,14 @@ server-side into a CMYK PDF before the order email is sent, via
    SKU's true physical print dimensions (millimeters converted to PDF
    points), so the print team can place it 1:1.
 
-The print-provider email gets **both** attachments: `{referenceId}.png`
-(RGB, for a quick on-screen look) and `{referenceId}-cmyk.pdf`
-(CMYK, the print-ready file). If the CMYK conversion fails for any
-reason, that's logged server-side and the order still goes out with just
-the PNG rather than blocking the customer's submission.
+The print-provider email gets that PDF as its only attachment, named
+`{referenceId}-{widthMm}x{heightMm}mm.pdf` (e.g.
+`HP-SKIN-A1B2C3-359.8x236mm.pdf`) - no separate PNG. Unlike the design
+compositing step, a CMYK conversion failure isn't retried or treated as
+best-effort - it's a deterministic step (the same input always produces
+the same output), so a failure there is recorded as an immediate
+permanent `emailStatus: "failed"` rather than silently falling back to
+something else.
 
 This currently uses libvips' generic RGB→CMYK transform - not calibrated
 to any specific press. Once you have an ICC profile from the actual print
