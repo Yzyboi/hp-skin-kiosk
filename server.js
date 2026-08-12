@@ -8,6 +8,7 @@ const kioskRoutes = require("./routes/kiosk");
 const adminRoutes = require("./routes/admin");
 const { requireAdmin } = require("./middleware/auth");
 const { ASSETS_DIR: DESIGN_ASSETS_DIR } = require("./lib/designsStore");
+const { startRetrySweep } = require("./lib/orderRetrySweep");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,3 +66,8 @@ app.listen(PORT, () => {
   console.log(`HP Skin Studio kiosk listening on http://localhost:${PORT}`);
   console.log(`Admin console at http://localhost:${PORT}/admin`);
 });
+
+// Picks up orders whose email delivery is still "retrying" after the
+// fast in-request attempts in orderDelivery.js were exhausted - see that
+// module for the full retry/backoff story.
+startRetrySweep();

@@ -159,6 +159,7 @@
   el.startOverHeaderBtn.addEventListener("click", startOver);
 
   async function startOver() {
+    stopStatusPoll();
     await api("/api/session/reset-store", { method: "POST" }).catch(() => {});
     state.storeId = null;
     state.storeName = null;
@@ -507,17 +508,15 @@
           consent: true
         })
       });
-      showConfirmScreen(result.referenceId, true, "Your order has been sent to the print provider.");
+      // The server responds as soon as the order is validated and saved -
+      // it doesn't wait for the print-provider email, so the confirmation
+      // shows right away in a "still working on it" state and the actual
+      // outcome (sent/failed) arrives shortly after via polling.
+      showConfirmScreen(result.referenceId);
+      setConfirmState("pending", "Sending your order to the print provider…");
+      pollOrderStatus();
     } catch (err) {
-      if (err.data && err.data.referenceId) {
-        showConfirmScreen(
-          err.data.referenceId,
-          false,
-          err.data.error || "We couldn't send your order to the print provider."
-        );
-      } else {
-        showCustomerError((err.data && err.data.error) || "Something went wrong submitting your order. Please try again.");
-      }
+      showCustomerError((err.data && err.data.error) || "Something went wrong submitting your order. Please try again.");
     } finally {
       el.submitOrderBtn.disabled = false;
       el.submitOrderBtn.textContent = "Submit Order";
@@ -528,10 +527,7 @@
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
-  function showConfirmScreen(referenceId, success, statusMessage) {
-    el.confirmIcon.textContent = success ? "✓" : "!";
-    el.confirmIcon.classList.toggle("error", !success);
-    el.confirmHeadline.textContent = success ? "You're all set." : "Order recorded.";
+  function showConfirmScreen(referenceId) {
     el.referenceId.textContent = referenceId;
     el.sumDesign.textContent = state.design.name;
     el.sumSku.textContent = `${state.sku.modelName} (${state.sku.familyName}) — ${state.sku.widthMm} mm × ${state.sku.heightMm} mm`;
@@ -539,12 +535,73 @@
     el.sumInitials.textContent = state.initials;
     el.sumStore.textContent = state.storeName || "—";
     el.sumReferenceId.textContent = referenceId;
-    el.submitStatus.textContent = statusMessage;
-    el.submitStatus.classList.toggle("error", !success);
     showScreen("confirm");
   }
 
+  // status: "pending" (still working on it) | "success" | "error"
+  function setConfirmState(status, statusMessage) {
+    const isError = status === "error";
+    el.confirmIcon.textContent = status === "success" ? "✓" : isError ? "!" : "⋯";
+    el.confirmIcon.classList.toggle("error", isError);
+    el.confirmHeadline.textContent = isError ? "Order recorded." : "You're all set.";
+    el.submitStatus.textContent = statusMessage;
+    el.submitStatus.classList.toggle("error", isError);
+  }
+
   // ---------- Screen 6: Confirmation ----------
+  let statusPollTimer = null;
+
+  function stopStatusPoll() {
+    if (statusPollTimer) {
+      clearTimeout(statusPollTimer);
+      statusPollTimer = null;
+    }
+  }
+
+  // Polls for up to STATUS_POLL_TIMEOUT_MS - long enough to cover the
+  // kiosk's fast in-request email retries (see orderDelivery.js), short
+  // enough to not spin forever after the customer has walked away. If it
+  // times out still "pending"/"retrying", the order keeps being retried
+  // server-side regardless (including the slower background sweep) -
+  // this only stops the screen from polling, it doesn't stop delivery.
+  const STATUS_POLL_INTERVAL_MS = 2000;
+  const STATUS_POLL_TIMEOUT_MS = 90000;
+
+  function pollOrderStatus() {
+    stopStatusPoll();
+    const deadline = Date.now() + STATUS_POLL_TIMEOUT_MS;
+
+    const tick = async () => {
+      if (Date.now() >= deadline) {
+        setConfirmState(
+          "pending",
+          "Your order is confirmed and we're still finalizing delivery to the print provider - no action needed."
+        );
+        return;
+      }
+
+      let data;
+      try {
+        data = await api("/api/orders/last-status");
+      } catch (err) {
+        statusPollTimer = setTimeout(tick, STATUS_POLL_INTERVAL_MS);
+        return;
+      }
+
+      if (data.emailStatus === "sent") {
+        setConfirmState("success", "Your order has been sent to the print provider.");
+        return;
+      }
+      if (data.emailStatus === "failed") {
+        setConfirmState("error", "We couldn't send your order to the print provider. Please ask a store associate for help.");
+        return;
+      }
+      statusPollTimer = setTimeout(tick, STATUS_POLL_INTERVAL_MS);
+    };
+
+    tick();
+  }
+
   el.startOverBtn.addEventListener("click", startOver);
 
   // ---------- Boot ----------

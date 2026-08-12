@@ -13,16 +13,14 @@ const crypto = require("crypto");
 const { readStores, findStoreById } = require("../lib/storesStore");
 const { readSkus, findSkuById } = require("../lib/skusStore");
 const { readDesigns, findDesignById } = require("../lib/designsStore");
-const { appendOrder } = require("../lib/ordersStore");
+const { appendOrder, findOrderByReferenceId } = require("../lib/ordersStore");
 const {
   sanitizeCustomizationText,
   isValidCustomizationText,
   sanitizePhone,
   validateCustomerInfo
 } = require("../lib/validators");
-const { sendSpecSheetEmail } = require("../lib/emailProvider");
-const { buildCmykPdf } = require("../lib/printAsset");
-const { compositeDesignPng } = require("../lib/designComposite");
+const { deliverOrder } = require("../lib/orderDelivery");
 
 const router = express.Router();
 
@@ -139,20 +137,6 @@ router.post("/submit", async (req, res) => {
     return res.status(400).json({ error: "Consent to HP's privacy statement is required" });
   }
 
-  // The final print asset is composited here from the original design
-  // artwork - the browser used to rasterize this itself and upload the
-  // result, which silently downsampled every design to a fixed low
-  // density regardless of the source art's actual resolution. Unlike the
-  // CMYK conversion below, this isn't best-effort: without it there's no
-  // image to send at all, so a failure here fails the whole submission.
-  let previewPngBuffer;
-  try {
-    previewPngBuffer = await compositeDesignPng({ design, sku, initials });
-  } catch (err) {
-    console.error(`[submit] design compositing failed for design ${design.id}:`, err);
-    return res.status(500).json({ error: "We couldn't generate your design. Please try again or ask a store associate for help." });
-  }
-
   const referenceId = generateReferenceId();
   const timestamp = new Date().toISOString();
 
@@ -182,45 +166,13 @@ router.post("/submit", async (req, res) => {
     customer
   };
 
-  let emailStatus = "sent";
-  let emailError = null;
-
-  // Print-ready CMYK conversion is a best-effort enhancement - if it fails
-  // for some reason, the order still goes out with just the RGB PNG
-  // rather than blocking the customer's submission entirely.
-  let cmykPdfBuffer = null;
-  try {
-    cmykPdfBuffer = await buildCmykPdf({
-      pngBuffer: previewPngBuffer,
-      widthMm: sku.widthMm,
-      heightMm: sku.heightMm
-    });
-  } catch (err) {
-    console.error(`[submit] CMYK PDF generation failed for ${referenceId}:`, err.message);
-  }
-
-  try {
-    await sendSpecSheetEmail({
-      toAddresses: store.printProviderEmails,
-      specSheet,
-      previewPngBuffer,
-      cmykPdfBuffer
-    });
-  } catch (err) {
-    emailStatus = "failed";
-    emailError = err.message;
-    // Logged with code/command/responseCode (not just message) since a
-    // timeout waiting for the final SMTP response looks identical to a
-    // real delivery failure from err.message alone, but they need very
-    // different fixes - the extra fields distinguish them.
-    console.error(`[submit] email send failed for ${referenceId}:`, {
-      message: err.message,
-      code: err.code,
-      command: err.command,
-      responseCode: err.responseCode
-    });
-  }
-
+  // The order is persisted and the customer's response sent immediately -
+  // compositing the print asset, building the CMYK PDF, and emailing the
+  // print provider (with retries - see orderDelivery.js) all happen
+  // afterward, off the customer's wait. A real delivery failure is no
+  // longer shown live; it's recorded here for the admin console's Orders
+  // view (emailStatus/emailError) and for the kiosk's own status poll
+  // below to pick up while the customer is still standing there.
   appendOrder({
     referenceId,
     timestamp,
@@ -244,18 +196,41 @@ router.post("/submit", async (req, res) => {
     customerState: customer.state,
     customerPincode: customer.pincode,
     consentGiven: true,
-    emailStatus,
-    emailError
+    emailStatus: "pending",
+    emailError: null,
+    emailAttempts: 0
   });
 
-  if (emailStatus === "failed") {
-    return res.status(502).json({
-      error: "We couldn't send your order to the print provider. Please try again or ask a store associate for help.",
-      referenceId
-    });
-  }
+  req.session.lastOrderRef = referenceId;
+  res.json({ referenceId, timestamp, emailStatus: "pending" });
 
-  res.json({ referenceId, timestamp });
+  deliverOrder({ referenceId, store, specSheet, design, sku, initials }).catch((err) => {
+    // deliverOrder already records failures on the order itself - this
+    // only guards against a genuinely unexpected bug in the pipeline
+    // (not a delivery failure) turning into an unhandled rejection.
+    console.error(`[submit] unexpected error delivering order ${referenceId}:`, err);
+  });
+});
+
+// Lets the kiosk poll for how the order it just placed is actually
+// doing, now that the response above doesn't wait for it - scoped to
+// this session's own last order rather than taking a referenceId
+// directly, so one kiosk session can't probe another customer's order
+// status via a guessed/observed reference ID.
+router.get("/orders/last-status", (req, res) => {
+  const referenceId = req.session.lastOrderRef;
+  if (!referenceId) {
+    return res.status(404).json({ error: "No recent order in this session" });
+  }
+  const order = findOrderByReferenceId(referenceId);
+  if (!order) {
+    return res.status(404).json({ error: "Order not found" });
+  }
+  res.json({
+    referenceId: order.referenceId,
+    emailStatus: order.emailStatus,
+    emailError: order.emailStatus === "failed" ? order.emailError : undefined
+  });
 });
 
 module.exports = router;
