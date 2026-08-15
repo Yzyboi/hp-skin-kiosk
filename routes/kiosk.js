@@ -9,7 +9,6 @@
 
 const express = require("express");
 const crypto = require("crypto");
-const fs = require("fs");
 const path = require("path");
 
 const { readStores, findStoreById } = require("../lib/storesStore");
@@ -23,7 +22,7 @@ const {
   validateCustomerInfo
 } = require("../lib/validators");
 const { deliverOrder } = require("../lib/orderDelivery");
-const { getAssetAspect } = require("../lib/designComposite");
+const { getAssetAspectFromFile } = require("../lib/designComposite");
 const { asyncHandler } = require("../lib/asyncHandler");
 
 const router = express.Router();
@@ -71,7 +70,7 @@ router.get("/designs", asyncHandler(async (req, res) => {
     designs.map(async (d) => {
       try {
         const assetFile = path.join(ASSETS_DIR, path.basename(d.assetPath));
-        const assetAspect = await getAssetAspect(fs.readFileSync(assetFile));
+        const assetAspect = await getAssetAspectFromFile(assetFile);
         return { ...d, assetAspect };
       } catch (err) {
         console.error(`[designs] could not read asset aspect ratio for design ${d.id}:`, err.message);
