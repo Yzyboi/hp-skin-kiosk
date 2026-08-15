@@ -38,6 +38,7 @@ const adminRoutes = require("./routes/admin");
 const { requireAdmin } = require("./middleware/auth");
 const { ASSETS_DIR: DESIGN_ASSETS_DIR } = require("./lib/designsStore");
 const { startRetrySweep } = require("./lib/orderRetrySweep");
+const { startMemoryLogging } = require("./lib/memoryMonitor");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -113,3 +114,8 @@ app.listen(PORT, () => {
 // fast in-request attempts in orderDelivery.js were exhausted - see that
 // module for the full retry/backoff story.
 startRetrySweep();
+
+// Logs a memory breakdown every 10 minutes so the platform's memory graph
+// can be correlated against what's actually growing (JS heap vs. native/
+// unaccounted) after the fact, from the log history - see memoryMonitor.js.
+startMemoryLogging();
