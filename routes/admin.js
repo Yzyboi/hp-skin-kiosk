@@ -24,6 +24,7 @@ const {
 } = require("../lib/excelTemplate");
 const { validateStoreRow, validateSkuRow, validateDesignFields } = require("../lib/validators");
 const { asyncHandler } = require("../lib/asyncHandler");
+const { snapshot: memorySnapshot } = require("../lib/memoryMonitor");
 
 const router = express.Router();
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -175,6 +176,14 @@ router.get("/api/session", (req, res) => {
     authenticated: !!(req.session && req.session.isAdmin),
     username: req.session ? req.session.adminUsername : null
   });
+});
+
+// On-demand version of what memoryMonitor.js otherwise only logs every
+// 10 minutes - lets an admin check "what does memory look like right now"
+// without digging through host logs. See memoryMonitor.js for what each
+// field means and how to read heapUsed vs. unaccounted.
+router.get("/api/system/memory", requireAdmin, (req, res) => {
+  res.json(memorySnapshot());
 });
 
 // --- Stores -----------------------------------------------------------
