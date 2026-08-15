@@ -1,8 +1,36 @@
 require("dotenv").config();
 
+// Last-resort safety net: this one process serves every store's kiosk, so
+// an error that would otherwise be an unhandled rejection/exception (Node
+// kills the whole process on those by default) needs to fail loudly and
+// restart cleanly rather than take every store down with no clear cause in
+// the logs. Route-level handling (see lib/asyncHandler.js) should catch
+// almost everything before it gets here - this only fires for whatever
+// slips past that. Exiting (instead of trying to keep running) is
+// deliberate: process state after an uncaught error can't be trusted, and
+// the host (Render/Railway) restarts the process automatically.
+process.on("unhandledRejection", (reason) => {
+  console.error("[fatal] unhandled rejection - exiting so the host can restart cleanly:", reason);
+  process.exit(1);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[fatal] uncaught exception - exiting so the host can restart cleanly:", err);
+  process.exit(1);
+});
+
 const path = require("path");
 const express = require("express");
 const session = require("express-session");
+const sharp = require("sharp");
+
+// sharp's native libvips layer defaults its worker thread pool to the
+// host's CPU count and keeps its own operation cache - both add memory
+// overhead that scales with the host, not with what this app actually
+// needs. Pinned to a small fixed number instead, matching the compositing
+// concurrency cap in lib/orderDelivery.js, so baseline/peak memory stay
+// predictable across different hosts/plans.
+sharp.cache(false);
+sharp.concurrency(2);
 
 const kioskRoutes = require("./routes/kiosk");
 const adminRoutes = require("./routes/admin");
