@@ -24,6 +24,7 @@ const {
 } = require("../lib/validators");
 const { deliverOrder } = require("../lib/orderDelivery");
 const { getAssetAspect } = require("../lib/designComposite");
+const { asyncHandler } = require("../lib/asyncHandler");
 
 const router = express.Router();
 
@@ -64,7 +65,7 @@ router.get("/skus", (req, res) => {
 // the artwork's intrinsic aspect ratio to reproduce that same crop math
 // for the live preview, so it's computed and attached here rather than
 // making the client guess it from the loaded <img>.
-router.get("/designs", async (req, res) => {
+router.get("/designs", asyncHandler(async (req, res) => {
   const designs = readDesigns();
   const enriched = await Promise.all(
     designs.map(async (d) => {
@@ -79,7 +80,7 @@ router.get("/designs", async (req, res) => {
     })
   );
   res.json(enriched);
-});
+}));
 
 // Current kiosk session context (store-only "login" state).
 router.get("/session", (req, res) => {
@@ -105,7 +106,7 @@ router.post("/session/reset-store", (req, res) => {
   res.json({ ok: true });
 });
 
-router.post("/submit", async (req, res) => {
+router.post("/submit", asyncHandler(async (req, res) => {
   const storeId = req.session.storeId;
   if (!storeId) {
     return res.status(400).json({ error: "No store selected for this session" });
@@ -232,7 +233,7 @@ router.post("/submit", async (req, res) => {
     // (not a delivery failure) turning into an unhandled rejection.
     console.error(`[submit] unexpected error delivering order ${referenceId}:`, err);
   });
-});
+}));
 
 // Lets the kiosk poll for how the order it just placed is actually
 // doing, now that the response above doesn't wait for it - scoped to

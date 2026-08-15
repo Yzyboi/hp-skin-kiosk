@@ -23,6 +23,7 @@ const {
   parseWorkbook
 } = require("../lib/excelTemplate");
 const { validateStoreRow, validateSkuRow, validateDesignFields } = require("../lib/validators");
+const { asyncHandler } = require("../lib/asyncHandler");
 
 const router = express.Router();
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -85,49 +86,59 @@ function detectDesignAssetType(buffer) {
 function handleMergeUpload({ sheetName, idField, validateRow, mergeRows }) {
   return (req, res) => {
     upload.single("file")(req, res, async (multerErr) => {
-      if (multerErr) {
-        return res.status(400).json({ error: multerErr.message });
-      }
-      if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
-      }
-
-      let rawRows;
+      // multer invokes this callback outside Express's own request dispatch
+      // (after it finishes reading the multipart stream), so a thrown/
+      // rejected error in here isn't caught by Express or by asyncHandler -
+      // it would otherwise become an unhandled rejection and crash the
+      // whole process for every store, not just fail this one upload.
       try {
-        rawRows = await parseWorkbook(req.file.buffer, sheetName);
+        if (multerErr) {
+          return res.status(400).json({ error: multerErr.message });
+        }
+        if (!req.file) {
+          return res.status(400).json({ error: "No file uploaded" });
+        }
+
+        let rawRows;
+        try {
+          rawRows = await parseWorkbook(req.file.buffer, sheetName);
+        } catch (err) {
+          return res.status(400).json({ error: `Could not parse workbook: ${err.message}` });
+        }
+
+        const validRows = [];
+        const skipped = [];
+        const seenIds = new Set();
+
+        rawRows.forEach((raw, i) => {
+          const excelRowNumber = i + 2; // header is row 1
+          const result = validateRow(raw);
+          if (!result.ok) {
+            skipped.push({ row: excelRowNumber, reason: result.reason });
+            return;
+          }
+          const id = result.row[idField];
+          if (seenIds.has(id)) {
+            skipped.push({ row: excelRowNumber, reason: `Duplicate ${idField} "${id}" earlier in this file` });
+            return;
+          }
+          seenIds.add(id);
+          validRows.push(result.row);
+        });
+
+        const { added, updated } = mergeRows(validRows);
+
+        res.json({
+          totalRows: rawRows.length,
+          added,
+          updated,
+          skippedCount: skipped.length,
+          skipped
+        });
       } catch (err) {
-        return res.status(400).json({ error: `Could not parse workbook: ${err.message}` });
+        console.error("[admin] upload merge failed:", err);
+        res.status(500).json({ error: "Unexpected server error" });
       }
-
-      const validRows = [];
-      const skipped = [];
-      const seenIds = new Set();
-
-      rawRows.forEach((raw, i) => {
-        const excelRowNumber = i + 2; // header is row 1
-        const result = validateRow(raw);
-        if (!result.ok) {
-          skipped.push({ row: excelRowNumber, reason: result.reason });
-          return;
-        }
-        const id = result.row[idField];
-        if (seenIds.has(id)) {
-          skipped.push({ row: excelRowNumber, reason: `Duplicate ${idField} "${id}" earlier in this file` });
-          return;
-        }
-        seenIds.add(id);
-        validRows.push(result.row);
-      });
-
-      const { added, updated } = mergeRows(validRows);
-
-      res.json({
-        totalRows: rawRows.length,
-        added,
-        updated,
-        skippedCount: skipped.length,
-        skipped
-      });
     });
   };
 }
@@ -172,7 +183,7 @@ router.get("/api/stores", requireAdmin, (req, res) => {
   res.json(readStores());
 });
 
-router.get("/api/stores/template", requireAdmin, async (req, res) => {
+router.get("/api/stores/template", requireAdmin, asyncHandler(async (req, res) => {
   const buffer = await buildWorkbook({
     sheetName: "Stores",
     headers: STORE_HEADERS,
@@ -181,7 +192,7 @@ router.get("/api/stores/template", requireAdmin, async (req, res) => {
   res.setHeader("Content-Type", XLSX_MIME);
   res.setHeader("Content-Disposition", "attachment; filename=hp-skin-kiosk-store-template.xlsx");
   res.send(buffer);
-});
+}));
 
 router.post(
   "/api/stores/upload",
@@ -201,7 +212,7 @@ router.get("/api/skus", requireAdmin, (req, res) => {
   res.json(readSkus());
 });
 
-router.get("/api/skus/template", requireAdmin, async (req, res) => {
+router.get("/api/skus/template", requireAdmin, asyncHandler(async (req, res) => {
   const buffer = await buildWorkbook({
     sheetName: "SKUs",
     headers: SKU_HEADERS,
@@ -210,7 +221,7 @@ router.get("/api/skus/template", requireAdmin, async (req, res) => {
   res.setHeader("Content-Type", XLSX_MIME);
   res.setHeader("Content-Disposition", "attachment; filename=hp-skin-kiosk-sku-template.xlsx");
   res.send(buffer);
-});
+}));
 
 router.post(
   "/api/skus/upload",
@@ -237,45 +248,58 @@ router.get("/api/designs", requireAdmin, (req, res) => {
 
 router.post("/api/designs", requireAdmin, (req, res) => {
   uploadDesignAsset.single("file")(req, res, (multerErr) => {
-    if (multerErr) return res.status(400).json({ error: multerErr.message });
-    if (!req.file) return res.status(400).json({ error: "No SVG or PNG file uploaded" });
-    const assetType = detectDesignAssetType(req.file.buffer);
-    if (!assetType) {
-      return res.status(400).json({ error: "That file doesn't look like a valid SVG or PNG" });
+    // See handleMergeUpload above - this callback runs outside Express's
+    // own dispatch, so an uncaught throw here would crash the whole
+    // process rather than just fail this one request.
+    try {
+      if (multerErr) return res.status(400).json({ error: multerErr.message });
+      if (!req.file) return res.status(400).json({ error: "No SVG or PNG file uploaded" });
+      const assetType = detectDesignAssetType(req.file.buffer);
+      if (!assetType) {
+        return res.status(400).json({ error: "That file doesn't look like a valid SVG or PNG" });
+      }
+
+      const result = validateDesignFields(req.body || {});
+      if (!result.ok) return res.status(400).json({ error: result.reason });
+
+      const record = addDesign({
+        name: result.name,
+        zone: result.zone,
+        fileBuffer: req.file.buffer,
+        assetType
+      });
+      res.json(record);
+    } catch (err) {
+      console.error("[admin] design create failed:", err);
+      res.status(500).json({ error: "Unexpected server error" });
     }
-
-    const result = validateDesignFields(req.body || {});
-    if (!result.ok) return res.status(400).json({ error: result.reason });
-
-    const record = addDesign({
-      name: result.name,
-      zone: result.zone,
-      fileBuffer: req.file.buffer,
-      assetType
-    });
-    res.json(record);
   });
 });
 
 router.put("/api/designs/:designId", requireAdmin, (req, res) => {
   uploadDesignAsset.single("file")(req, res, (multerErr) => {
-    if (multerErr) return res.status(400).json({ error: multerErr.message });
-    const assetType = req.file ? detectDesignAssetType(req.file.buffer) : null;
-    if (req.file && !assetType) {
-      return res.status(400).json({ error: "That file doesn't look like a valid SVG or PNG" });
+    try {
+      if (multerErr) return res.status(400).json({ error: multerErr.message });
+      const assetType = req.file ? detectDesignAssetType(req.file.buffer) : null;
+      if (req.file && !assetType) {
+        return res.status(400).json({ error: "That file doesn't look like a valid SVG or PNG" });
+      }
+
+      const result = validateDesignFields(req.body || {});
+      if (!result.ok) return res.status(400).json({ error: result.reason });
+
+      const updated = updateDesign(req.params.designId, {
+        name: result.name,
+        zone: result.zone,
+        fileBuffer: req.file ? req.file.buffer : null,
+        assetType
+      });
+      if (!updated) return res.status(404).json({ error: "Design not found" });
+      res.json(updated);
+    } catch (err) {
+      console.error("[admin] design update failed:", err);
+      res.status(500).json({ error: "Unexpected server error" });
     }
-
-    const result = validateDesignFields(req.body || {});
-    if (!result.ok) return res.status(400).json({ error: result.reason });
-
-    const updated = updateDesign(req.params.designId, {
-      name: result.name,
-      zone: result.zone,
-      fileBuffer: req.file ? req.file.buffer : null,
-      assetType
-    });
-    if (!updated) return res.status(404).json({ error: "Design not found" });
-    res.json(updated);
   });
 });
 
@@ -322,7 +346,7 @@ function orderToRow(o) {
   ];
 }
 
-router.get("/api/orders/export", requireAdmin, async (req, res) => {
+router.get("/api/orders/export", requireAdmin, asyncHandler(async (req, res) => {
   const { from, to } = req.query;
   if (!from || !to) {
     return res.status(400).json({ error: "'from' and 'to' query params are required (YYYY-MM-DD)" });
@@ -353,6 +377,6 @@ router.get("/api/orders/export", requireAdmin, async (req, res) => {
     `attachment; filename=hp-skin-kiosk-orders_${from}_to_${to}.xlsx`
   );
   res.send(buffer);
-});
+}));
 
 module.exports = router;
