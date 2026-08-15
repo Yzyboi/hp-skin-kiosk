@@ -21,6 +21,7 @@ process.on("uncaughtException", (err) => {
 const path = require("path");
 const express = require("express");
 const session = require("express-session");
+const SessionMemoryStore = require("memorystore")(session);
 const sharp = require("sharp");
 
 // sharp's native libvips layer defaults its worker thread pool to the
@@ -51,6 +52,19 @@ if (!process.env.SESSION_SECRET) {
 app.use(express.json({ limit: "1mb" })); // all JSON bodies are plain text fields now that the preview PNG is composited server-side
 app.use(
   session({
+    // express-session's built-in MemoryStore only evicts an expired
+    // session when that same session ID is looked up again - a kiosk
+    // customer who selects a store once and never comes back (the common
+    // case, one order per visit) leaves that session sitting in memory
+    // forever. Across 62 stores that's exactly what a memory graph
+    // climbing in steps and never coming back down looks like.
+    // memorystore proactively sweeps out expired entries on a timer
+    // (checkPeriod) regardless of whether they're ever revisited, and
+    // `max` is a hard ceiling in case traffic ever outpaces the sweep.
+    store: new SessionMemoryStore({
+      checkPeriod: 60 * 60 * 1000, // sweep hourly
+      max: 5000
+    }),
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
